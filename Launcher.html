@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eaglercraft Multi-Version Launcher</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f1115;
+      --panel: #171a21;
+      --text: #e7ebf3;
+      --subtle: #9ea9bf;
+      --accent: #5f86ff;
+      --accent2: #6dc8ff;
+      --danger: #ff6b6b;
+      --ok: #5dd39e;
+      font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #0f1115 0%, #0d1220 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 12px;
+      padding: 16px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid #23293a;
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    h1, h2 {
+      margin: 0 0 8px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+
+    p { margin: 0; color: var(--subtle); }
+
+    .versions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .versionCard {
+      padding: 10px;
+      border: 1px solid #273149;
+      border-radius: 10px;
+      background: #131827;
+    }
+
+    select, button, input[type="file"] {
+      width: 100%;
+      border: 1px solid #2e3956;
+      background: #0f1524;
+      color: var(--text);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 14px;
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform .05s ease, border-color .2s ease;
+    }
+
+    button:hover { border-color: var(--accent2); }
+    button:active { transform: translateY(1px); }
+
+    .row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .primary {
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      color: #0b1222;
+      border: 0;
+    }
+
+    .danger { border-color: #5a2525; color: #ffc6c6; }
+
+    #status { margin-top: 8px; color: var(--ok); min-height: 1.3em; }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      min-height: 60vh;
+      border: 1px solid #273149;
+      border-radius: 12px;
+      background: #020409;
+    }
+
+    code { color: #9fd3ff; }
+  </style>
+</head>
+<body>
+  <section class="panel">
+    <h1>Eaglercraft Multi-Version Launcher</h1>
+    <p>Each HTML client gets its own local save profile. Use dropdowns by version, launch in the frame, and export/import your launcher save data for cross-PC migration.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Launcher Controls</h2>
+    <div id="versionMenus" class="versions"></div>
+    <div class="row">
+      <button id="launchBtn" class="primary">Launch selected client</button>
+      <button id="saveCurrentBtn">Save current profile snapshot</button>
+      <button id="exportBtn">Export launcher save data</button>
+      <input id="importFile" type="file" accept="application/json" />
+      <button id="importBtn">Import launcher save data</button>
+      <button id="resetBtn" class="danger">Reset selected profile</button>
+    </div>
+    <p id="activeClient"></p>
+    <p id="status"></p>
+  </section>
+
+  <iframe id="gameFrame" title="Game launcher frame"></iframe>
+
+  <script>
+    const VERSION_FILES = {
+      "1.5.2": [
+        "OddFutureClient.html",
+        "eaglercraft.1.5.2.html",
+        "nitclient.html",
+        "PrecisionClient.html",
+        "fuchsiax.html"
+      ],
+      "1.12.2": [
+        "PixelClient 1.12.2 JS.html",
+        "TuffClient_1.12.2wasm.html",
+        "TuffClient_1.12.2-JS.html",
+        "Eaglercraft-1.12.2.html",
+        "PixelClient 1.12.2 WASM.html",
+        "Eaglercraft-1.12.2-WASM.html",
+        "RadiantClient-1.1-WASM.html"
+      ]
+    };
+
+    const LAUNCHER_KEY = "launcherProfiles.v1";
+    const LAUNCHER_META_KEY = "launcherMeta.v1";
+
+    const statusEl = document.getElementById("status");
+    const activeClientEl = document.getElementById("activeClient");
+    const frame = document.getElementById("gameFrame");
+    const menusContainer = document.getElementById("versionMenus");
+
+    const selects = {};
+    let activeClientPath = "";
+
+    function setStatus(message, isError = false) {
+      statusEl.style.color = isError ? "#ff9a9a" : "#8de3b2";
+      statusEl.textContent = message;
+    }
+
+    function getNonLauncherStorageSnapshot() {
+      const snapshot = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k || k === LAUNCHER_KEY || k === LAUNCHER_META_KEY) continue;
+        snapshot[k] = localStorage.getItem(k);
+      }
+      return snapshot;
+    }
+
+    function clearNonLauncherStorage() {
+      const toDelete = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k || k === LAUNCHER_KEY || k === LAUNCHER_META_KEY) continue;
+        toDelete.push(k);
+      }
+      toDelete.forEach(k => localStorage.removeItem(k));
+    }
+
+    function loadProfiles() {
+      try {
+        return JSON.parse(localStorage.getItem(LAUNCHER_KEY) || "{}");
+      } catch {
+        return {};
+      }
+    }
+
+    function saveProfiles(profiles) {
+      localStorage.setItem(LAUNCHER_KEY, JSON.stringify(profiles));
+      localStorage.setItem(LAUNCHER_META_KEY, JSON.stringify({ updatedAt: new Date().toISOString() }));
+    }
+
+    function saveCurrentProfileSnapshot() {
+      if (!activeClientPath) {
+        setStatus("No active client loaded yet. Launch one first.", true);
+        return;
+      }
+      const profiles = loadProfiles();
+      profiles[activeClientPath] = getNonLauncherStorageSnapshot();
+      saveProfiles(profiles);
+      setStatus(`Saved profile snapshot for ${activeClientPath}`);
+    }
+
+    function applyProfile(clientPath) {
+      const profiles = loadProfiles();
+      const profile = profiles[clientPath] || {};
+      clearNonLauncherStorage();
+      Object.entries(profile).forEach(([k, v]) => localStorage.setItem(k, v));
+    }
+
+    function saveActiveProfileBeforeSwitch() {
+      if (!activeClientPath) return;
+      const profiles = loadProfiles();
+      profiles[activeClientPath] = getNonLauncherStorageSnapshot();
+      saveProfiles(profiles);
+    }
+
+    function launchClient(clientPath) {
+      saveActiveProfileBeforeSwitch();
+      applyProfile(clientPath);
+      activeClientPath = clientPath;
+      frame.src = clientPath;
+      activeClientEl.textContent = `Active client: ${clientPath}`;
+      setStatus(`Launched ${clientPath} with isolated save profile.`);
+    }
+
+    function selectedClientPath() {
+      const firstVersion = Object.keys(VERSION_FILES)[0];
+      let version = firstVersion;
+      let file = selects[firstVersion]?.value;
+      Object.entries(selects).forEach(([v, select]) => {
+        if (select.dataset.active === "true") {
+          version = v;
+          file = select.value;
+        }
+      });
+      return `${version}/${file}`;
+    }
+
+    function renderVersionMenus() {
+      Object.entries(VERSION_FILES).forEach(([version, files], index) => {
+        const card = document.createElement("div");
+        card.className = "versionCard";
+        card.innerHTML = `<strong>${version}</strong>`;
+
+        const select = document.createElement("select");
+        files.forEach(file => {
+          const option = document.createElement("option");
+          option.value = file;
+          option.textContent = file;
+          select.appendChild(option);
+        });
+        select.dataset.active = index === 0 ? "true" : "false";
+
+        select.addEventListener("focus", () => {
+          Object.values(selects).forEach(s => s.dataset.active = "false");
+          select.dataset.active = "true";
+        });
+
+        card.appendChild(select);
+        menusContainer.appendChild(card);
+        selects[version] = select;
+      });
+    }
+
+    document.getElementById("launchBtn").addEventListener("click", () => {
+      const path = selectedClientPath();
+      launchClient(path);
+    });
+
+    document.getElementById("saveCurrentBtn").addEventListener("click", saveCurrentProfileSnapshot);
+
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      saveActiveProfileBeforeSwitch();
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        profiles: loadProfiles()
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "eagler-launcher-profiles.json";
+      a.click();
+      URL.revokeObjectURL(url);
+      setStatus("Exported launcher save data.");
+    });
+
+    document.getElementById("importBtn").addEventListener("click", async () => {
+      const file = document.getElementById("importFile").files?.[0];
+      if (!file) {
+        setStatus("Select a JSON export file first.", true);
+        return;
+      }
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        if (!parsed || typeof parsed !== "object" || typeof parsed.profiles !== "object") {
+          throw new Error("Invalid launcher export format");
+        }
+        saveProfiles(parsed.profiles);
+        if (activeClientPath) {
+          applyProfile(activeClientPath);
+          frame.src = activeClientPath;
+        }
+        setStatus("Imported launcher save data.");
+      } catch (err) {
+        setStatus(`Import failed: ${err.message}`, true);
+      }
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      const path = selectedClientPath();
+      const profiles = loadProfiles();
+      delete profiles[path];
+      saveProfiles(profiles);
+      if (activeClientPath === path) {
+        clearNonLauncherStorage();
+        frame.src = path;
+      }
+      setStatus(`Reset saved profile for ${path}`);
+    });
+
+    window.addEventListener("beforeunload", saveActiveProfileBeforeSwitch);
+
+    renderVersionMenus();
+    activeClientEl.textContent = "Active client: none (choose version dropdown + launch)";
+  </script>
+</body>
+</html>
