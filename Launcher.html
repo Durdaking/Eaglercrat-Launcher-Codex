@@ -131,26 +131,6 @@
     #status { margin-top: 10px; color: var(--ok); min-height: 1.3em; text-align: center; }
     #activeClient { text-align: center; }
 
-    .frameControls {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 14px;
-      margin-bottom: 12px;
-    }
-
-    #gameContainer {
-      display: grid;
-      gap: 10px;
-    }
-
-    iframe {
-      width: 100%;
-      height: 100%;
-      min-height: 60vh;
-      border: 1px solid #273149;
-      border-radius: 12px;
-      background: #020409;
-    }
 
     .hidden { display: none; }
   </style>
@@ -179,7 +159,7 @@
     </div>
 
     <div class="row">
-      <button id="launchBtn" class="primary">Launch selected client</button>
+      <button id="launchBtn" class="primary">Play selected client</button>
       <button id="resetBtn" class="danger">Reset selected profile</button>
     </div>
 
@@ -193,13 +173,6 @@
     <p id="status"></p>
   </section>
 
-  <section id="gameContainer">
-    <div class="frameControls">
-      <button id="fullscreenBtn">Fullscreen game frame</button>
-      <button id="newTabBtn">Launch selected client in new tab</button>
-    </div>
-    <iframe id="gameFrame" title="Game launcher frame"></iframe>
-  </section>
 
   <script>
     const VERSION_FILES = {
@@ -266,12 +239,10 @@
 
     const statusEl = document.getElementById("status");
     const activeClientEl = document.getElementById("activeClient");
-    const frame = document.getElementById("gameFrame");
     const profileSelect = document.getElementById("profileSelect");
     const versionButtons = document.getElementById("versionButtons");
     const categorySelect = document.getElementById("categorySelect");
     const clientSelect = document.getElementById("clientSelect");
-    const gameContainer = document.getElementById("gameContainer");
 
     let activeClientPath = "";
     let activeVersion = VERSION_ORDER[0];
@@ -463,29 +434,12 @@
       saveState(state);
     }
 
-    function launchClient(clientPath) {
-      const resolvedUrl = resolveClientUrl(clientPath);
-      saveActiveProfileBeforeSwitch();
-      applyProfile(clientPath);
-      activeClientPath = clientPath;
-      frame.src = "about:blank";
-      requestAnimationFrame(() => {
-        frame.src = resolvedUrl;
-      });
-      activeClientEl.textContent = `Active client: ${clientPath}`;
-      setStatus(`Launched ${clientPath} with isolated save profile.`);
-    }
-
     function openClientInNewTab(clientPath) {
       const resolvedUrl = resolveClientUrl(clientPath);
       saveActiveProfileBeforeSwitch();
       applyProfile(clientPath);
       activeClientPath = clientPath;
-      const win = window.open(resolvedUrl, "_blank", "noopener");
-      if (!win) {
-        setStatus("Popup blocked. Allow popups for this page to launch in a new tab.", true);
-        return;
-      }
+      window.open(resolvedUrl, "_blank", "noopener");
       activeClientEl.textContent = `Active client: ${clientPath}`;
       setStatus(`Opened ${clientPath} in a new tab.`);
     }
@@ -496,30 +450,7 @@
         setStatus("No client is selected for this version.", true);
         return;
       }
-      launchClient(path);
-    });
-
-    document.getElementById("newTabBtn").addEventListener("click", () => {
-      const path = getSelectedClientPath();
-      if (!path) {
-        setStatus("No client is selected for this version.", true);
-        return;
-      }
       openClientInNewTab(path);
-    });
-
-    document.getElementById("fullscreenBtn").addEventListener("click", async () => {
-      try {
-        if (document.fullscreenElement) {
-          await document.exitFullscreen();
-          setStatus("Exited fullscreen mode.");
-          return;
-        }
-        await gameContainer.requestFullscreen();
-        setStatus("Entered fullscreen mode.");
-      } catch (err) {
-        setStatus(`Fullscreen failed: ${err.message}`, true);
-      }
     });
 
     document.getElementById("resetBtn").addEventListener("click", () => {
@@ -535,7 +466,6 @@
       saveState(state);
       if (activeClientPath === path) {
         clearNonLauncherStorage();
-        frame.src = resolveClientUrl(path);
       }
       setStatus(`Reset saved client data for ${path} in profile "${state.activeProfile}"`);
     });
@@ -547,7 +477,6 @@
       saveState(state);
       if (activeClientPath) {
         applyProfile(activeClientPath);
-        frame.src = resolveClientUrl(activeClientPath);
       }
       setStatus(`Switched to profile "${state.activeProfile}"`);
     });
@@ -571,7 +500,6 @@
       renderProfileMenu();
       if (activeClientPath) {
         applyProfile(activeClientPath);
-        frame.src = resolveClientUrl(activeClientPath);
       }
       setStatus(`Created profile "${name}"`);
     });
@@ -590,7 +518,6 @@
       renderProfileMenu();
       if (activeClientPath) {
         applyProfile(activeClientPath);
-        frame.src = resolveClientUrl(activeClientPath);
       }
       setStatus(`Deleted profile "${target}"`);
     });
@@ -631,8 +558,7 @@
         renderProfileMenu();
         if (activeClientPath) {
           applyProfile(activeClientPath);
-          frame.src = resolveClientUrl(activeClientPath);
-        }
+          }
         importFile.value = "";
         setStatus("Imported all client data.");
       } catch (err) {
@@ -646,7 +572,7 @@
     renderProfileMenu();
     populateCategorySelect();
     renderVersionButtons();
-    activeClientEl.textContent = "Active client: none (select a version button + launch)";
+    activeClientEl.textContent = "Active client: none (select a version button + play)";
   </script>
 </body>
 </html>
