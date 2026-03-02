@@ -367,6 +367,11 @@
       return grouped[category] || [];
     }
 
+
+    function displayClientName(filePath) {
+      return filePath.split("/").pop() || filePath;
+    }
+
     function populateCategoryFiles(version) {
       const categorySelect = categorySelects[version];
       const fileSelect = selects[version];
@@ -377,7 +382,7 @@
       files.forEach((file) => {
         const option = document.createElement("option");
         option.value = file;
-        option.textContent = file;
+        option.textContent = displayClientName(file);
         fileSelect.appendChild(option);
       });
     }
@@ -431,7 +436,7 @@
           data.forEach((file) => {
             const option = document.createElement("option");
             option.value = file;
-            option.textContent = file;
+            option.textContent = displayClientName(file);
             select.appendChild(option);
           });
 
