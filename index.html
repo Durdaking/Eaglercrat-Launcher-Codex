@@ -1,47 +1,117 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Advanced Eagler Launcher</title>
-<link rel="stylesheet" href="style.css">
+    <title>Eaglercraft Offline Launcher</title>
+    <style>
+        body {
+            margin: 0;
+            background: #111;
+            color: white;
+            font-family: Arial;
+            text-align: center;
+        }
+
+        #menu {
+            padding: 20px;
+        }
+
+        button {
+            padding: 8px 18px;
+            margin: 4px;
+            border: none;
+            border-radius: 6px;
+            background: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #3e8e41;
+        }
+
+        #controls {
+            display: none;
+            padding: 10px;
+            background: #222;
+        }
+
+        #gameFrame {
+            width: 100%;
+            height: 85vh;
+            border: none;
+            display: none;
+        }
+
+        .danger {
+            background: #d9534f;
+        }
+
+        .blue {
+            background: #0275d8;
+        }
+
+        .purple {
+            background: #6f42c1;
+        }
+    </style>
 </head>
 <body>
 
-<canvas id="particles"></canvas>
+<div id="menu">
+    <h1>Eaglercraft Offline Launcher</h1>
 
-<div class="launcher">
+    <h2>1.8.8 - Legit</h2>
+    <button onclick="launch('./1.8.8/Legit/AstrialJS.html')">Astrial JS</button>
 
-<h1>Advanced Eagler Launcher</h1>
-
-<div class="profiles">
-<select id="profileSelect"></select>
-<button onclick="Launcher.createProfile()">New</button>
-<button onclick="Launcher.deleteProfile()">Delete</button>
-<button onclick="Launcher.lockProfile()">Lock</button>
+    <h2>1.12.2</h2>
+    <button onclick="launch('./1.12.2/Eaglercraft-1.12.2-WASM.html')">Vanilla WASM</button>
 </div>
 
-<select id="versionSelect"></select>
-<select id="categorySelect" style="display:none"></select>
-
-<div id="clientGrid" class="clientGrid"></div>
-
-<div class="controls">
-<button onclick="Launcher.launch()">Play</button>
-<button onclick="Launcher.uploadBackground()">Background</button>
-<button onclick="Launcher.toggleMusic()">Music</button>
-<button onclick="Launcher.exportBackup()">Export</button>
-<button onclick="Launcher.importBackup()">Import</button>
+<div id="controls">
+    <button class="blue" onclick="goFullscreen()">Fullscreen</button>
+    <button class="purple" onclick="openNewTab()">Open in New Tab</button>
+    <button class="danger" onclick="goBack()">Back to Menu</button>
 </div>
 
-<p id="status"></p>
-</div>
+<iframe id="gameFrame"></iframe>
 
-<audio id="bgMusic" src="assets/music.mp3" loop></audio>
+<script>
 
-<script src="compression.js"></script>
-<script src="particles.js"></script>
-<script src="launcher.js"></script>
+let currentPath = "";
+
+function launch(path) {
+    currentPath = path;
+    document.getElementById("menu").style.display = "none";
+    document.getElementById("gameFrame").style.display = "block";
+    document.getElementById("controls").style.display = "block";
+    document.getElementById("gameFrame").src = path;
+}
+
+function goBack() {
+    document.getElementById("gameFrame").src = "";
+    document.getElementById("gameFrame").style.display = "none";
+    document.getElementById("menu").style.display = "block";
+    document.getElementById("controls").style.display = "none";
+}
+
+function openNewTab() {
+    if (currentPath !== "") {
+        window.open(currentPath, "_blank");
+    }
+}
+
+function goFullscreen() {
+    let iframe = document.getElementById("gameFrame");
+    if (iframe.requestFullscreen) {
+        iframe.requestFullscreen();
+    } else if (iframe.webkitRequestFullscreen) {
+        iframe.webkitRequestFullscreen();
+    } else if (iframe.msRequestFullscreen) {
+        iframe.msRequestFullscreen();
+    }
+}
+
+</script>
 
 </body>
 </html>
