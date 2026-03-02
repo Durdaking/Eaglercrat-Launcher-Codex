@@ -1,8 +1,8 @@
 diff --git a/README.md b/README.md
-index be03a6bdd487872bb78f259506a6c94dd63748ec..eac56221e318e8b17b2b6f0801975faac54cc649 100644
+index be03a6bdd487872bb78f259506a6c94dd63748ec..6d43ccccbd0defa04d4aeb5db550d8c36f438e05 100644
 --- a/README.md
 +++ b/README.md
-@@ -1 +1,16 @@
+@@ -1 +1,17 @@
 -I made this with codex and its not done
 +# Eaglercraft Launcher
 +
@@ -16,6 +16,7 @@ index be03a6bdd487872bb78f259506a6c94dd63748ec..eac56221e318e8b17b2b6f0801975faa
 +- Added launcher controls below the selectors for launching in a fullscreen frame or opening the selected client directly in a new tab.
 +- Isolated save data per HTML file.
 +- Multiple named launcher profiles (create, switch, delete).
++- Save all client data to a JSON backup file and import it later with the import button.
 +
 +## Notes
 +- Save isolation currently manages `localStorage` values for this origin.
