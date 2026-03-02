@@ -7,7 +7,6 @@
   <style>
     :root {
       color-scheme: dark;
-      --bg: #0f1115;
       --panel: #171a21;
       --text: #e7ebf3;
       --subtle: #9ea9bf;
@@ -38,36 +37,37 @@
       padding: 12px;
     }
 
+    .topBar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .credit {
+      font-weight: 700;
+      font-size: 18px;
+      margin-top: 2px;
+    }
+
+    .ioControls {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(150px, 1fr));
+      gap: 10px;
+      max-width: 700px;
+      width: 100%;
+      margin-left: auto;
+    }
+
     h1, h2 {
       margin: 0 0 8px;
       font-weight: 700;
       letter-spacing: 0.2px;
+      text-align: center;
     }
 
     p { margin: 0; color: var(--subtle); }
-
-    .versions {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 14px;
-    }
-
-    .versionCard {
-      padding: 10px;
-      border: 1px solid #273149;
-      border-radius: 10px;
-      background: #131827;
-    }
-
-    .versionCard strong {
-      display: inline-block;
-      margin-bottom: 8px;
-    }
-
-    .versionCard .stack {
-      display: grid;
-      gap: 10px;
-    }
 
     select, button, input[type="file"] {
       width: 100%;
@@ -95,6 +95,35 @@
       margin-top: 14px;
     }
 
+    .middle {
+      display: grid;
+      justify-items: center;
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .versionButtons {
+      display: grid;
+      gap: 10px;
+      width: min(320px, 100%);
+    }
+
+    .versionBtn {
+      background: #121a2b;
+    }
+
+    .versionBtn.active {
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      color: #0b1222;
+      border-color: transparent;
+    }
+
+    .selectorStack {
+      display: grid;
+      gap: 10px;
+      width: min(540px, 100%);
+    }
+
     .primary {
       background: linear-gradient(90deg, var(--accent), var(--accent2));
       color: #0b1222;
@@ -103,7 +132,8 @@
 
     .danger { border-color: #5a2525; color: #ffc6c6; }
 
-    #status { margin-top: 8px; color: var(--ok); min-height: 1.3em; }
+    #status { margin-top: 10px; color: var(--ok); min-height: 1.3em; text-align: center; }
+    #activeClient { text-align: center; }
 
     iframe {
       width: 100%;
@@ -114,31 +144,43 @@
       background: #020409;
     }
 
-    code { color: #9fd3ff; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
-  <section class="panel">
-    <h1>Eaglercraft Multi-Version Launcher</h1>
-    <p>Use version dropdowns to launch clients, and save everything into named profiles (with isolated saves per HTML) so you can swap profiles or move them to another PC.</p>
+  <section class="panel topBar">
+    <div class="credit">Made by Durdaking</div>
+    <div class="ioControls">
+      <button id="exportBtn">Export launcher save data</button>
+      <input id="importFile" type="file" accept="application/json" />
+      <button id="importBtn">Import launcher save data</button>
+    </div>
   </section>
 
   <section class="panel">
+    <h1>Eaglercraft Multi-Version Launcher</h1>
     <h2>Launcher Controls</h2>
+
     <div class="row">
       <select id="profileSelect" aria-label="Saved launcher profiles"></select>
       <button id="newProfileBtn">Create profile</button>
       <button id="deleteProfileBtn" class="danger">Delete profile</button>
     </div>
-    <div id="versionMenus" class="versions"></div>
+
+    <div class="middle">
+      <div id="versionButtons" class="versionButtons"></div>
+      <div class="selectorStack">
+        <select id="categorySelect" class="hidden" aria-label="1.8.8 client category"></select>
+        <select id="clientSelect" aria-label="Client html selection"></select>
+      </div>
+    </div>
+
     <div class="row">
       <button id="launchBtn" class="primary">Launch selected client</button>
       <button id="saveCurrentBtn">Save current profile snapshot</button>
-      <button id="exportBtn">Export launcher save data</button>
-      <input id="importFile" type="file" accept="application/json" />
-      <button id="importBtn">Import launcher save data</button>
       <button id="resetBtn" class="danger">Reset selected profile</button>
     </div>
+
     <p id="activeClient"></p>
     <p id="status"></p>
   </section>
@@ -147,12 +189,14 @@
 
   <script>
     const VERSION_FILES = {
-      "1.5.2": [
-        "OddFutureClient.html",
-        "eaglercraft.1.5.2.html",
-        "nitclient.html",
-        "PrecisionClient.html",
-        "fuchsiax.html"
+      "1.12.2": [
+        "PixelClient 1.12.2 JS.html",
+        "TuffClient_1.12.2wasm.html",
+        "TuffClient_1.12.2-JS.html",
+        "Eaglercraft-1.12.2.html",
+        "PixelClient 1.12.2 WASM.html",
+        "Eaglercraft-1.12.2-WASM.html",
+        "RadiantClient-1.1-WASM.html"
       ],
       "1.8.8": {
         hacked: [
@@ -185,14 +229,12 @@
           "Modded/Eaglercraft_IR_StarLikeClient_0.4.2.html"
         ]
       },
-      "1.12.2": [
-        "PixelClient 1.12.2 JS.html",
-        "TuffClient_1.12.2wasm.html",
-        "TuffClient_1.12.2-JS.html",
-        "Eaglercraft-1.12.2.html",
-        "PixelClient 1.12.2 WASM.html",
-        "Eaglercraft-1.12.2-WASM.html",
-        "RadiantClient-1.1-WASM.html"
+      "1.5.2": [
+        "OddFutureClient.html",
+        "eaglercraft.1.5.2.html",
+        "nitclient.html",
+        "PrecisionClient.html",
+        "fuchsiax.html"
       ]
     };
 
@@ -202,6 +244,8 @@
       modded: "Modded clients"
     };
 
+    const VERSION_ORDER = ["1.12.2", "1.8.8", "1.5.2"];
+
     const LAUNCHER_KEY = "launcherProfiles.v2";
     const LEGACY_LAUNCHER_KEY = "launcherProfiles.v1";
     const LAUNCHER_META_KEY = "launcherMeta.v1";
@@ -209,13 +253,13 @@
     const statusEl = document.getElementById("status");
     const activeClientEl = document.getElementById("activeClient");
     const frame = document.getElementById("gameFrame");
-    const menusContainer = document.getElementById("versionMenus");
     const profileSelect = document.getElementById("profileSelect");
+    const versionButtons = document.getElementById("versionButtons");
+    const categorySelect = document.getElementById("categorySelect");
+    const clientSelect = document.getElementById("clientSelect");
 
-    const selects = {};
-    const categorySelects = {};
     let activeClientPath = "";
-    let activeVersion = Object.keys(VERSION_FILES)[0];
+    let activeVersion = VERSION_ORDER[0];
 
     function setStatus(message, isError = false) {
       statusEl.style.color = isError ? "#ff9a9a" : "#8de3b2";
@@ -239,7 +283,7 @@
         if (!k || k === LAUNCHER_KEY || k === LEGACY_LAUNCHER_KEY || k === LAUNCHER_META_KEY) continue;
         toDelete.push(k);
       }
-      toDelete.forEach(k => localStorage.removeItem(k));
+      toDelete.forEach((k) => localStorage.removeItem(k));
     }
 
     function emptyState() {
@@ -258,7 +302,7 @@
           return parsed;
         }
       } catch {
-        // fallthrough to migration/default
+        // fallthrough
       }
 
       try {
@@ -272,7 +316,7 @@
           };
         }
       } catch {
-        // fallthrough to default
+        // fallthrough
       }
 
       return emptyState();
@@ -311,6 +355,74 @@
       });
       profileSelect.value = state.activeProfile;
       saveState(state);
+    }
+
+    function displayClientName(filePath) {
+      return filePath.split("/").pop() || filePath;
+    }
+
+    function getSelectedClientPath() {
+      const file = clientSelect.value;
+      return file ? `${activeVersion}/${file}` : "";
+    }
+
+    function populateCategorySelect() {
+      categorySelect.innerHTML = "";
+      const grouped = VERSION_FILES["1.8.8"];
+      Object.keys(grouped).forEach((category) => {
+        const option = document.createElement("option");
+        option.value = category;
+        option.textContent = CATEGORY_LABELS[category] || category;
+        categorySelect.appendChild(option);
+      });
+    }
+
+    function populateClientSelect() {
+      clientSelect.innerHTML = "";
+      let files = [];
+
+      if (activeVersion === "1.8.8") {
+        const grouped = VERSION_FILES["1.8.8"];
+        files = grouped[categorySelect.value] || [];
+      } else {
+        files = VERSION_FILES[activeVersion] || [];
+      }
+
+      files.forEach((file) => {
+        const option = document.createElement("option");
+        option.value = file;
+        option.textContent = displayClientName(file);
+        clientSelect.appendChild(option);
+      });
+    }
+
+    function setActiveVersion(version) {
+      activeVersion = version;
+      [...versionButtons.querySelectorAll("button")].forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.version === version);
+      });
+
+      if (version === "1.8.8") {
+        categorySelect.classList.remove("hidden");
+      } else {
+        categorySelect.classList.add("hidden");
+      }
+
+      populateClientSelect();
+      setStatus(`Selected version ${version}`);
+    }
+
+    function renderVersionButtons() {
+      versionButtons.innerHTML = "";
+      VERSION_ORDER.forEach((version) => {
+        const button = document.createElement("button");
+        button.className = "versionBtn";
+        button.dataset.version = version;
+        button.textContent = version;
+        button.addEventListener("click", () => setActiveVersion(version));
+        versionButtons.appendChild(button);
+      });
+      setActiveVersion(VERSION_ORDER[0]);
     }
 
     function saveCurrentProfileSnapshot() {
@@ -354,117 +466,34 @@
       setStatus(`Launched ${clientPath} with isolated save profile.`);
     }
 
-    function markVersionActive(version) {
-      activeVersion = version;
-      Object.entries(selects).forEach(([currentVersion, select]) => {
-        select.dataset.active = currentVersion === version ? "true" : "false";
-      });
-    }
-
-    function getCategoryFiles(version, category) {
-      const grouped = VERSION_FILES[version];
-      if (!grouped || Array.isArray(grouped)) return [];
-      return grouped[category] || [];
-    }
-
-
-    function displayClientName(filePath) {
-      return filePath.split("/").pop() || filePath;
-    }
-
-    function populateCategoryFiles(version) {
-      const categorySelect = categorySelects[version];
-      const fileSelect = selects[version];
-      if (!categorySelect || !fileSelect) return;
-
-      const files = getCategoryFiles(version, categorySelect.value);
-      fileSelect.innerHTML = "";
-      files.forEach((file) => {
-        const option = document.createElement("option");
-        option.value = file;
-        option.textContent = displayClientName(file);
-        fileSelect.appendChild(option);
-      });
-    }
-
-    function selectedClientPath() {
-      const version = activeVersion;
-      const fileSelect = selects[version];
-      const file = fileSelect?.value;
-      return file ? `${version}/${file}` : "";
-    }
-
-    function renderVersionMenus() {
-      Object.entries(VERSION_FILES).forEach(([version, data], index) => {
-        const card = document.createElement("div");
-        card.className = "versionCard";
-
-        const title = document.createElement("strong");
-        title.textContent = version;
-        card.appendChild(title);
-
-        const stack = document.createElement("div");
-        stack.className = "stack";
-
-        if (version === "1.8.8" && !Array.isArray(data)) {
-          const categorySelect = document.createElement("select");
-          Object.keys(data).forEach((category) => {
-            const option = document.createElement("option");
-            option.value = category;
-            option.textContent = CATEGORY_LABELS[category] || category;
-            categorySelect.appendChild(option);
-          });
-          categorySelects[version] = categorySelect;
-          stack.appendChild(categorySelect);
-
-          const clientSelect = document.createElement("select");
-          selects[version] = clientSelect;
-          stack.appendChild(clientSelect);
-
-          categorySelect.addEventListener("change", () => {
-            markVersionActive(version);
-            populateCategoryFiles(version);
-          });
-
-          categorySelect.addEventListener("focus", () => markVersionActive(version));
-          clientSelect.addEventListener("focus", () => markVersionActive(version));
-          clientSelect.addEventListener("change", () => markVersionActive(version));
-
-          populateCategoryFiles(version);
-        } else {
-          const select = document.createElement("select");
-          data.forEach((file) => {
-            const option = document.createElement("option");
-            option.value = file;
-            option.textContent = displayClientName(file);
-            select.appendChild(option);
-          });
-
-          select.addEventListener("focus", () => markVersionActive(version));
-          select.addEventListener("change", () => markVersionActive(version));
-
-          selects[version] = select;
-          stack.appendChild(select);
-        }
-
-        card.appendChild(stack);
-        menusContainer.appendChild(card);
-        if (index === 0) {
-          markVersionActive(version);
-        }
-      });
-    }
-
     document.getElementById("launchBtn").addEventListener("click", () => {
-      const path = selectedClientPath();
+      const path = getSelectedClientPath();
       if (!path) {
-        setStatus("No client is selected for the active version.", true);
+        setStatus("No client is selected for this version.", true);
         return;
       }
       launchClient(path);
     });
 
     document.getElementById("saveCurrentBtn").addEventListener("click", saveCurrentProfileSnapshot);
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      const path = getSelectedClientPath();
+      if (!path) {
+        setStatus("No client is selected for this version.", true);
+        return;
+      }
+      const state = loadState();
+      state.activeProfile = getActiveProfileName();
+      const profile = getActiveProfile(state);
+      delete profile.clients[path];
+      saveState(state);
+      if (activeClientPath === path) {
+        clearNonLauncherStorage();
+        frame.src = path;
+      }
+      setStatus(`Reset saved client data for ${path} in profile "${state.activeProfile}"`);
+    });
 
     profileSelect.addEventListener("change", () => {
       saveActiveProfileBeforeSwitch();
@@ -561,29 +590,13 @@
       }
     });
 
-    document.getElementById("resetBtn").addEventListener("click", () => {
-      const path = selectedClientPath();
-      if (!path) {
-        setStatus("No client is selected for the active version.", true);
-        return;
-      }
-      const state = loadState();
-      state.activeProfile = getActiveProfileName();
-      const profile = getActiveProfile(state);
-      delete profile.clients[path];
-      saveState(state);
-      if (activeClientPath === path) {
-        clearNonLauncherStorage();
-        frame.src = path;
-      }
-      setStatus(`Reset saved client data for ${path} in profile "${state.activeProfile}"`);
-    });
-
+    categorySelect.addEventListener("change", populateClientSelect);
     window.addEventListener("beforeunload", saveActiveProfileBeforeSwitch);
 
     renderProfileMenu();
-    renderVersionMenus();
-    activeClientEl.textContent = "Active client: none (choose version dropdown + launch)";
+    populateCategorySelect();
+    renderVersionButtons();
+    activeClientEl.textContent = "Active client: none (select a version button + launch)";
   </script>
 </body>
 </html>
