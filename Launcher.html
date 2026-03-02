@@ -37,12 +37,10 @@
       padding: 12px;
     }
 
-    .topBar {
+    .creditBar {
       display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 12px;
-      flex-wrap: wrap;
+      justify-content: flex-start;
+      align-items: center;
     }
 
     .credit {
@@ -51,14 +49,6 @@
       margin-top: 2px;
     }
 
-    .ioControls {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(150px, 1fr));
-      gap: 10px;
-      max-width: 700px;
-      width: 100%;
-      margin-left: auto;
-    }
 
     h1, h2 {
       margin: 0 0 8px;
@@ -160,13 +150,8 @@
   </style>
 </head>
 <body>
-  <section class="panel topBar">
+  <section class="panel creditBar">
     <div class="credit">Made by Durdaking</div>
-    <div class="ioControls">
-      <button id="exportBtn">Export launcher save data</button>
-      <input id="importFile" type="file" accept="application/json" />
-      <button id="importBtn">Import launcher save data</button>
-    </div>
   </section>
 
   <section class="panel">
@@ -189,7 +174,6 @@
 
     <div class="row">
       <button id="launchBtn" class="primary">Launch selected client</button>
-      <button id="saveCurrentBtn">Save current profile snapshot</button>
       <button id="resetBtn" class="danger">Reset selected profile</button>
     </div>
 
@@ -389,6 +373,19 @@
       return new URL(clientPath, window.location.href).href;
     }
 
+    async function ensureClientReachable(clientPath) {
+      const url = resolveClientUrl(clientPath);
+      try {
+        const response = await fetch(url, { method: "GET", cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        return url;
+      } catch (err) {
+        throw new Error(`Could not load ${clientPath} (${err.message})`);
+      }
+    }
+
     function populateCategorySelect() {
       categorySelect.innerHTML = "";
       const grouped = VERSION_FILES["1.8.8"];
@@ -448,19 +445,6 @@
       setActiveVersion(VERSION_ORDER[0]);
     }
 
-    function saveCurrentProfileSnapshot() {
-      if (!activeClientPath) {
-        setStatus("No active client loaded yet. Launch one first.", true);
-        return;
-      }
-      const state = loadState();
-      state.activeProfile = getActiveProfileName();
-      const profile = getActiveProfile(state);
-      profile.clients[activeClientPath] = getNonLauncherStorageSnapshot();
-      saveState(state);
-      setStatus(`Saved snapshot for ${activeClientPath} in profile "${state.activeProfile}"`);
-    }
-
     function applyProfile(clientPath) {
       const state = loadState();
       state.activeProfile = getActiveProfileName();
@@ -480,20 +464,25 @@
       saveState(state);
     }
 
-    function launchClient(clientPath) {
+    async function launchClient(clientPath) {
+      const resolvedUrl = await ensureClientReachable(clientPath);
       saveActiveProfileBeforeSwitch();
       applyProfile(clientPath);
       activeClientPath = clientPath;
-      frame.src = resolveClientUrl(clientPath);
+      frame.src = "about:blank";
+      requestAnimationFrame(() => {
+        frame.src = resolvedUrl;
+      });
       activeClientEl.textContent = `Active client: ${clientPath}`;
       setStatus(`Launched ${clientPath} with isolated save profile.`);
     }
 
-    function openClientInNewTab(clientPath) {
+    async function openClientInNewTab(clientPath) {
+      const resolvedUrl = await ensureClientReachable(clientPath);
       saveActiveProfileBeforeSwitch();
       applyProfile(clientPath);
       activeClientPath = clientPath;
-      const win = window.open(resolveClientUrl(clientPath), "_blank", "noopener");
+      const win = window.open(resolvedUrl, "_blank", "noopener");
       if (!win) {
         setStatus("Popup blocked. Allow popups for this page to launch in a new tab.", true);
         return;
@@ -502,24 +491,30 @@
       setStatus(`Opened ${clientPath} in a new tab.`);
     }
 
-    document.getElementById("launchBtn").addEventListener("click", () => {
+    document.getElementById("launchBtn").addEventListener("click", async () => {
       const path = getSelectedClientPath();
       if (!path) {
         setStatus("No client is selected for this version.", true);
         return;
       }
-      launchClient(path);
+      try {
+        await launchClient(path);
+      } catch (err) {
+        setStatus(err.message, true);
+      }
     });
 
-    document.getElementById("saveCurrentBtn").addEventListener("click", saveCurrentProfileSnapshot);
-
-    document.getElementById("newTabBtn").addEventListener("click", () => {
+    document.getElementById("newTabBtn").addEventListener("click", async () => {
       const path = getSelectedClientPath();
       if (!path) {
         setStatus("No client is selected for this version.", true);
         return;
       }
-      openClientInNewTab(path);
+      try {
+        await openClientInNewTab(path);
+      } catch (err) {
+        setStatus(err.message, true);
+      }
     });
 
     document.getElementById("fullscreenBtn").addEventListener("click", async () => {
@@ -607,46 +602,6 @@
         frame.src = resolveClientUrl(activeClientPath);
       }
       setStatus(`Deleted profile "${target}"`);
-    });
-
-    document.getElementById("exportBtn").addEventListener("click", () => {
-      saveActiveProfileBeforeSwitch();
-      const payload = {
-        exportedAt: new Date().toISOString(),
-        state: loadState()
-      };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "eagler-launcher-profiles.json";
-      a.click();
-      URL.revokeObjectURL(url);
-      setStatus("Exported launcher save data.");
-    });
-
-    document.getElementById("importBtn").addEventListener("click", async () => {
-      const file = document.getElementById("importFile").files?.[0];
-      if (!file) {
-        setStatus("Select a JSON export file first.", true);
-        return;
-      }
-      try {
-        const text = await file.text();
-        const parsed = JSON.parse(text);
-        if (!parsed || typeof parsed !== "object" || typeof parsed.state !== "object") {
-          throw new Error("Invalid launcher export format");
-        }
-        saveState(parsed.state);
-        renderProfileMenu();
-        if (activeClientPath) {
-          applyProfile(activeClientPath);
-          frame.src = resolveClientUrl(activeClientPath);
-        }
-        setStatus("Imported launcher save data.");
-      } catch (err) {
-        setStatus(`Import failed: ${err.message}`, true);
-      }
     });
 
     categorySelect.addEventListener("change", populateClientSelect);
