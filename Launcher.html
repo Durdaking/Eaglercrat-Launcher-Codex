@@ -189,6 +189,8 @@
             <button id="newProfileBtn">Create profile</button>
             <button id="deleteProfileBtn" class="danger">Delete profile</button>
           </div>
+          <button id="skinBtn">Upload skin (auto-load on play)</button>
+          <input id="skinFile" class="importFileHidden" type="file" accept="image/*" />
         </div>
       </div>
     </div>
@@ -300,7 +302,7 @@
       return {
         activeProfile: "Default",
         profiles: {
-          Default: { clients: {} }
+          Default: { clients: {}, skinDataUrl: null }
         }
       };
     }
@@ -321,7 +323,7 @@
           return {
             activeProfile: "Imported Legacy",
             profiles: {
-              "Imported Legacy": { clients: legacy }
+              "Imported Legacy": { clients: legacy, skinDataUrl: null }
             }
           };
         }
@@ -344,7 +346,10 @@
     function getActiveProfile(state) {
       const profileName = state.activeProfile;
       if (!state.profiles[profileName]) {
-        state.profiles[profileName] = { clients: {} };
+        state.profiles[profileName] = { clients: {}, skinDataUrl: null };
+      }
+      if (!Object.prototype.hasOwnProperty.call(state.profiles[profileName], "skinDataUrl")) {
+        state.profiles[profileName].skinDataUrl = null;
       }
       return state.profiles[profileName];
     }
@@ -439,6 +444,15 @@
       setActiveVersion(VERSION_ORDER[0]);
     }
 
+
+    function applyProfileSkin(profile) {
+      if (!profile?.skinDataUrl) return;
+      const skinDataUrl = profile.skinDataUrl;
+      localStorage.setItem("launcher.customSkin", skinDataUrl);
+      localStorage.setItem("eaglercraft.skin.custom", skinDataUrl);
+      localStorage.setItem("eaglercraftX.skin.custom", skinDataUrl);
+    }
+
     function applyProfile(clientPath) {
       const state = loadState();
       state.activeProfile = getActiveProfileName();
@@ -446,6 +460,7 @@
       const clientSave = profile.clients[clientPath] || {};
       clearNonLauncherStorage();
       Object.entries(clientSave).forEach(([k, v]) => localStorage.setItem(k, v));
+      applyProfileSkin(profile);
       saveState(state);
     }
 
@@ -518,7 +533,7 @@
         return;
       }
       saveActiveProfileBeforeSwitch();
-      state.profiles[name] = { clients: {} };
+      state.profiles[name] = { clients: {}, skinDataUrl: null };
       state.activeProfile = name;
       saveState(state);
       renderProfileMenu();
@@ -546,6 +561,41 @@
       setStatus(`Deleted profile "${target}"`);
     });
 
+
+
+    const skinFileInput = document.getElementById("skinFile");
+    document.getElementById("skinBtn").addEventListener("click", () => {
+      skinFileInput.click();
+    });
+
+    skinFileInput.addEventListener("change", async () => {
+      const file = skinFileInput.files?.[0];
+      if (!file) return;
+      try {
+        const skinDataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ""));
+          reader.onerror = () => reject(new Error("Failed to read skin file"));
+          reader.readAsDataURL(file);
+        });
+
+        if (!skinDataUrl.startsWith("data:image/")) {
+          throw new Error("Skin file must be an image");
+        }
+
+        const state = loadState();
+        state.activeProfile = getActiveProfileName();
+        const profile = getActiveProfile(state);
+        profile.skinDataUrl = skinDataUrl;
+        saveState(state);
+        applyProfileSkin(profile);
+        setStatus(`Skin saved for profile "${state.activeProfile}" and will load on play.`);
+      } catch (err) {
+        setStatus(`Skin import failed: ${err.message}`, true);
+      } finally {
+        skinFileInput.value = "";
+      }
+    });
 
     document.getElementById("exportAllBtn").addEventListener("click", () => {
       saveActiveProfileBeforeSwitch();
