@@ -373,19 +373,6 @@
       return new URL(clientPath, window.location.href).href;
     }
 
-    async function ensureClientReachable(clientPath) {
-      const url = resolveClientUrl(clientPath);
-      try {
-        const response = await fetch(url, { method: "GET", cache: "no-store" });
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        return url;
-      } catch (err) {
-        throw new Error(`Could not load ${clientPath} (${err.message})`);
-      }
-    }
-
     function populateCategorySelect() {
       categorySelect.innerHTML = "";
       const grouped = VERSION_FILES["1.8.8"];
@@ -464,8 +451,8 @@
       saveState(state);
     }
 
-    async function launchClient(clientPath) {
-      const resolvedUrl = await ensureClientReachable(clientPath);
+    function launchClient(clientPath) {
+      const resolvedUrl = resolveClientUrl(clientPath);
       saveActiveProfileBeforeSwitch();
       applyProfile(clientPath);
       activeClientPath = clientPath;
@@ -477,8 +464,8 @@
       setStatus(`Launched ${clientPath} with isolated save profile.`);
     }
 
-    async function openClientInNewTab(clientPath) {
-      const resolvedUrl = await ensureClientReachable(clientPath);
+    function openClientInNewTab(clientPath) {
+      const resolvedUrl = resolveClientUrl(clientPath);
       saveActiveProfileBeforeSwitch();
       applyProfile(clientPath);
       activeClientPath = clientPath;
@@ -491,30 +478,22 @@
       setStatus(`Opened ${clientPath} in a new tab.`);
     }
 
-    document.getElementById("launchBtn").addEventListener("click", async () => {
+    document.getElementById("launchBtn").addEventListener("click", () => {
       const path = getSelectedClientPath();
       if (!path) {
         setStatus("No client is selected for this version.", true);
         return;
       }
-      try {
-        await launchClient(path);
-      } catch (err) {
-        setStatus(err.message, true);
-      }
+      launchClient(path);
     });
 
-    document.getElementById("newTabBtn").addEventListener("click", async () => {
+    document.getElementById("newTabBtn").addEventListener("click", () => {
       const path = getSelectedClientPath();
       if (!path) {
         setStatus("No client is selected for this version.", true);
         return;
       }
-      try {
-        await openClientInNewTab(path);
-      } catch (err) {
-        setStatus(err.message, true);
-      }
+      openClientInNewTab(path);
     });
 
     document.getElementById("fullscreenBtn").addEventListener("click", async () => {
