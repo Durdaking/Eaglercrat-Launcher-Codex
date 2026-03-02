@@ -110,11 +110,16 @@
 <body>
   <section class="panel">
     <h1>Eaglercraft Multi-Version Launcher</h1>
-    <p>Each HTML client gets its own local save profile. Use dropdowns by version, launch in the frame, and export/import your launcher save data for cross-PC migration.</p>
+    <p>Use version dropdowns to launch clients, and save everything into named profiles (with isolated saves per HTML) so you can swap profiles or move them to another PC.</p>
   </section>
 
   <section class="panel">
     <h2>Launcher Controls</h2>
+    <div class="row">
+      <select id="profileSelect" aria-label="Saved launcher profiles"></select>
+      <button id="newProfileBtn">Create profile</button>
+      <button id="deleteProfileBtn" class="danger">Delete profile</button>
+    </div>
     <div id="versionMenus" class="versions"></div>
     <div class="row">
       <button id="launchBtn" class="primary">Launch selected client</button>
@@ -139,6 +144,31 @@
         "PrecisionClient.html",
         "fuchsiax.html"
       ],
+      "1.8.8": [
+        "Hacked/DragonX_V2_International.html",
+        "hacked/NitClient 2.0.html",
+        "hacked/nit_client.html",
+        "hacked/pi-client.html",
+        "hacked/DragonX_V4.html",
+        "hacked/UwUClient v1 Full.html",
+        "hacked/Justin 1.2.4.html",
+        "hacked/DragonXLite.html",
+        "hacked/dragonXv3.html",
+        "hacked/PremiumDragonv2.html",
+        "hacked/DragonXShadow.html",
+        "Legit/AstriaWASM.html",
+        "Legit/AstriaJS.html",
+        "Legit/EaglercraftX_1.8_WASM-GC_Offline_Download.html",
+        "Legit/EaglercraftX_1.8_u53_Offline_Signed.html",
+        "Legit/Astra Client 2, Pre-Alpha-02.html",
+        "Legit/ResentClient_5.0_WASM.html",
+        "Modded/Eaglerforge.html",
+        "Modded/Eaglercraft_IR_StarLikeClient_0.4.2.html",
+        "legit/PixelClient 1.8.8 JS.html",
+        "legit/PixelClient 1.8.8 WASM.html",
+        "legit/EaglerReborn.html",
+        "legit/shadowclient3.0beta.html"
+      ],
       "1.12.2": [
         "PixelClient 1.12.2 JS.html",
         "TuffClient_1.12.2wasm.html",
@@ -150,13 +180,15 @@
       ]
     };
 
-    const LAUNCHER_KEY = "launcherProfiles.v1";
+    const LAUNCHER_KEY = "launcherProfiles.v2";
+    const LEGACY_LAUNCHER_KEY = "launcherProfiles.v1";
     const LAUNCHER_META_KEY = "launcherMeta.v1";
 
     const statusEl = document.getElementById("status");
     const activeClientEl = document.getElementById("activeClient");
     const frame = document.getElementById("gameFrame");
     const menusContainer = document.getElementById("versionMenus");
+    const profileSelect = document.getElementById("profileSelect");
 
     const selects = {};
     let activeClientPath = "";
@@ -186,17 +218,75 @@
       toDelete.forEach(k => localStorage.removeItem(k));
     }
 
-    function loadProfiles() {
-      try {
-        return JSON.parse(localStorage.getItem(LAUNCHER_KEY) || "{}");
-      } catch {
-        return {};
-      }
+    function emptyState() {
+      return {
+        activeProfile: "Default",
+        profiles: {
+          Default: { clients: {} }
+        }
+      };
     }
 
-    function saveProfiles(profiles) {
-      localStorage.setItem(LAUNCHER_KEY, JSON.stringify(profiles));
+    function loadState() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(LAUNCHER_KEY) || "null");
+        if (parsed && typeof parsed === "object" && parsed.profiles && parsed.activeProfile) {
+          return parsed;
+        }
+      } catch {
+        // fallthrough to migration/default
+      }
+
+      try {
+        const legacy = JSON.parse(localStorage.getItem(LEGACY_LAUNCHER_KEY) || "null");
+        if (legacy && typeof legacy === "object") {
+          return {
+            activeProfile: "Imported Legacy",
+            profiles: {
+              "Imported Legacy": { clients: legacy }
+            }
+          };
+        }
+      } catch {
+        // fallthrough to default
+      }
+
+      return emptyState();
+    }
+
+    function saveState(state) {
+      localStorage.setItem(LAUNCHER_KEY, JSON.stringify(state));
       localStorage.setItem(LAUNCHER_META_KEY, JSON.stringify({ updatedAt: new Date().toISOString() }));
+    }
+
+    function getActiveProfileName() {
+      return profileSelect.value || loadState().activeProfile;
+    }
+
+    function getActiveProfile(state) {
+      const profileName = state.activeProfile;
+      if (!state.profiles[profileName]) {
+        state.profiles[profileName] = { clients: {} };
+      }
+      return state.profiles[profileName];
+    }
+
+    function renderProfileMenu() {
+      const state = loadState();
+      const names = Object.keys(state.profiles);
+      if (!names.length) {
+        Object.assign(state, emptyState());
+      }
+
+      profileSelect.innerHTML = "";
+      Object.keys(state.profiles).forEach((name) => {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        profileSelect.appendChild(option);
+      });
+      profileSelect.value = state.activeProfile;
+      saveState(state);
     }
 
     function saveCurrentProfileSnapshot() {
@@ -204,24 +294,31 @@
         setStatus("No active client loaded yet. Launch one first.", true);
         return;
       }
-      const profiles = loadProfiles();
-      profiles[activeClientPath] = getNonLauncherStorageSnapshot();
-      saveProfiles(profiles);
-      setStatus(`Saved profile snapshot for ${activeClientPath}`);
+      const state = loadState();
+      state.activeProfile = getActiveProfileName();
+      const profile = getActiveProfile(state);
+      profile.clients[activeClientPath] = getNonLauncherStorageSnapshot();
+      saveState(state);
+      setStatus(`Saved snapshot for ${activeClientPath} in profile "${state.activeProfile}"`);
     }
 
     function applyProfile(clientPath) {
-      const profiles = loadProfiles();
-      const profile = profiles[clientPath] || {};
+      const state = loadState();
+      state.activeProfile = getActiveProfileName();
+      const profile = getActiveProfile(state);
+      const clientSave = profile.clients[clientPath] || {};
       clearNonLauncherStorage();
-      Object.entries(profile).forEach(([k, v]) => localStorage.setItem(k, v));
+      Object.entries(clientSave).forEach(([k, v]) => localStorage.setItem(k, v));
+      saveState(state);
     }
 
     function saveActiveProfileBeforeSwitch() {
       if (!activeClientPath) return;
-      const profiles = loadProfiles();
-      profiles[activeClientPath] = getNonLauncherStorageSnapshot();
-      saveProfiles(profiles);
+      const state = loadState();
+      state.activeProfile = getActiveProfileName();
+      const profile = getActiveProfile(state);
+      profile.clients[activeClientPath] = getNonLauncherStorageSnapshot();
+      saveState(state);
     }
 
     function launchClient(clientPath) {
@@ -279,11 +376,66 @@
 
     document.getElementById("saveCurrentBtn").addEventListener("click", saveCurrentProfileSnapshot);
 
+    profileSelect.addEventListener("change", () => {
+      saveActiveProfileBeforeSwitch();
+      const state = loadState();
+      state.activeProfile = profileSelect.value;
+      saveState(state);
+      if (activeClientPath) {
+        applyProfile(activeClientPath);
+        frame.src = activeClientPath;
+      }
+      setStatus(`Switched to profile "${state.activeProfile}"`);
+    });
+
+    document.getElementById("newProfileBtn").addEventListener("click", () => {
+      const requestedName = window.prompt("Enter a new profile name:");
+      const name = requestedName?.trim();
+      if (!name) {
+        setStatus("Profile creation cancelled.", true);
+        return;
+      }
+      const state = loadState();
+      if (state.profiles[name]) {
+        setStatus("A profile with that name already exists.", true);
+        return;
+      }
+      saveActiveProfileBeforeSwitch();
+      state.profiles[name] = { clients: {} };
+      state.activeProfile = name;
+      saveState(state);
+      renderProfileMenu();
+      if (activeClientPath) {
+        applyProfile(activeClientPath);
+        frame.src = activeClientPath;
+      }
+      setStatus(`Created profile "${name}"`);
+    });
+
+    document.getElementById("deleteProfileBtn").addEventListener("click", () => {
+      const state = loadState();
+      const names = Object.keys(state.profiles);
+      if (names.length <= 1) {
+        setStatus("Cannot delete the only remaining profile.", true);
+        return;
+      }
+      const target = getActiveProfileName();
+      delete state.profiles[target];
+      state.activeProfile = Object.keys(state.profiles)[0];
+      saveState(state);
+      renderProfileMenu();
+      if (activeClientPath) {
+        applyProfile(activeClientPath);
+        frame.src = activeClientPath;
+      }
+      setStatus(`Deleted profile "${target}"`);
+    });
+
     document.getElementById("exportBtn").addEventListener("click", () => {
       saveActiveProfileBeforeSwitch();
       const payload = {
         exportedAt: new Date().toISOString(),
-        profiles: loadProfiles()
+        state: loadState()
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -304,10 +456,11 @@
       try {
         const text = await file.text();
         const parsed = JSON.parse(text);
-        if (!parsed || typeof parsed !== "object" || typeof parsed.profiles !== "object") {
+        if (!parsed || typeof parsed !== "object" || typeof parsed.state !== "object") {
           throw new Error("Invalid launcher export format");
         }
-        saveProfiles(parsed.profiles);
+        saveState(parsed.state);
+        renderProfileMenu();
         if (activeClientPath) {
           applyProfile(activeClientPath);
           frame.src = activeClientPath;
@@ -320,18 +473,21 @@
 
     document.getElementById("resetBtn").addEventListener("click", () => {
       const path = selectedClientPath();
-      const profiles = loadProfiles();
-      delete profiles[path];
-      saveProfiles(profiles);
+      const state = loadState();
+      state.activeProfile = getActiveProfileName();
+      const profile = getActiveProfile(state);
+      delete profile.clients[path];
+      saveState(state);
       if (activeClientPath === path) {
         clearNonLauncherStorage();
         frame.src = path;
       }
-      setStatus(`Reset saved profile for ${path}`);
+      setStatus(`Reset saved client data for ${path} in profile "${state.activeProfile}"`);
     });
 
     window.addEventListener("beforeunload", saveActiveProfileBeforeSwitch);
 
+    renderProfileMenu();
     renderVersionMenus();
     activeClientEl.textContent = "Active client: none (choose version dropdown + launch)";
   </script>
