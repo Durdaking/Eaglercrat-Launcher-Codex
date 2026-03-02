@@ -386,7 +386,7 @@
     }
 
     function resolveClientUrl(clientPath) {
-      return encodeURI(clientPath);
+      return new URL(clientPath, window.location.href).href;
     }
 
     function populateCategorySelect() {
@@ -549,7 +549,7 @@
       saveState(state);
       if (activeClientPath === path) {
         clearNonLauncherStorage();
-        frame.src = path;
+        frame.src = resolveClientUrl(path);
       }
       setStatus(`Reset saved client data for ${path} in profile "${state.activeProfile}"`);
     });
@@ -561,7 +561,7 @@
       saveState(state);
       if (activeClientPath) {
         applyProfile(activeClientPath);
-        frame.src = activeClientPath;
+        frame.src = resolveClientUrl(activeClientPath);
       }
       setStatus(`Switched to profile "${state.activeProfile}"`);
     });
@@ -585,7 +585,7 @@
       renderProfileMenu();
       if (activeClientPath) {
         applyProfile(activeClientPath);
-        frame.src = activeClientPath;
+        frame.src = resolveClientUrl(activeClientPath);
       }
       setStatus(`Created profile "${name}"`);
     });
@@ -604,7 +604,7 @@
       renderProfileMenu();
       if (activeClientPath) {
         applyProfile(activeClientPath);
-        frame.src = activeClientPath;
+        frame.src = resolveClientUrl(activeClientPath);
       }
       setStatus(`Deleted profile "${target}"`);
     });
@@ -641,7 +641,7 @@
         renderProfileMenu();
         if (activeClientPath) {
           applyProfile(activeClientPath);
-          frame.src = activeClientPath;
+          frame.src = resolveClientUrl(activeClientPath);
         }
         setStatus("Imported launcher save data.");
       } catch (err) {
