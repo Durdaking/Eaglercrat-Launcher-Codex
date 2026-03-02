@@ -49,11 +49,32 @@
       margin-top: 2px;
     }
 
-    .backupControls {
+    .launcherLayout {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      grid-template-columns: minmax(220px, 1fr) minmax(280px, 1.2fr) minmax(220px, 1fr);
       gap: 14px;
       margin-top: 14px;
+      align-items: start;
+    }
+
+    .sideCol, .centerCol {
+      display: grid;
+      gap: 12px;
+    }
+
+    .profileButtons, .actionButtons {
+      display: grid;
+      gap: 10px;
+    }
+
+    .importFileHidden {
+      display: none;
+    }
+
+    @media (max-width: 900px) {
+      .launcherLayout {
+        grid-template-columns: 1fr;
+      }
     }
 
     h1, h2 {
@@ -144,29 +165,32 @@
     <h1>Eaglercraft Multi-Version Launcher</h1>
     <h2>Launcher Controls</h2>
 
-    <div class="row">
-      <select id="profileSelect" aria-label="Saved launcher profiles"></select>
-      <button id="newProfileBtn">Create profile</button>
-      <button id="deleteProfileBtn" class="danger">Delete profile</button>
-    </div>
-
-    <div class="middle">
-      <div id="versionButtons" class="versionButtons"></div>
-      <div class="selectorStack">
-        <select id="categorySelect" class="hidden" aria-label="1.8.8 client category"></select>
-        <select id="clientSelect" aria-label="Client html selection"></select>
+    <div class="launcherLayout">
+      <div class="sideCol">
+        <select id="profileSelect" aria-label="Saved launcher profiles"></select>
+        <div class="profileButtons">
+          <button id="newProfileBtn">Create profile</button>
+          <button id="deleteProfileBtn" class="danger">Delete profile</button>
+        </div>
+        <div id="versionButtons" class="versionButtons"></div>
       </div>
-    </div>
 
-    <div class="row">
-      <button id="launchBtn" class="primary">Play selected client</button>
-      <button id="resetBtn" class="danger">Reset selected profile</button>
-    </div>
+      <div class="centerCol">
+        <div class="selectorStack">
+          <select id="categorySelect" class="hidden" aria-label="1.8.8 client category"></select>
+          <select id="clientSelect" aria-label="Client html selection"></select>
+        </div>
+      </div>
 
-    <div class="backupControls">
-      <button id="exportAllBtn">Save all client data</button>
-      <input id="importAllFile" type="file" accept="application/json" />
-      <button id="importAllBtn">Import saved client data</button>
+      <div class="sideCol">
+        <div class="actionButtons">
+          <button id="launchBtn" class="primary">Play selected client</button>
+          <button id="resetBtn" class="danger">Reset selected profile</button>
+          <button id="exportAllBtn">Save all client data</button>
+          <button id="importAllBtn">Import saved client data</button>
+          <input id="importAllFile" class="importFileHidden" type="file" accept="application/json" />
+        </div>
+      </div>
     </div>
 
     <p id="activeClient"></p>
@@ -539,14 +563,7 @@
       setStatus("Saved all client data to file.");
     });
 
-    document.getElementById("importAllBtn").addEventListener("click", async () => {
-      const importFile = document.getElementById("importAllFile");
-      const file = importFile.files?.[0];
-      if (!file) {
-        setStatus("Select a saved data JSON file first.", true);
-        return;
-      }
-
+    async function importAllFromFile(file) {
       try {
         const text = await file.text();
         const parsed = JSON.parse(text);
@@ -558,12 +575,23 @@
         renderProfileMenu();
         if (activeClientPath) {
           applyProfile(activeClientPath);
-          }
-        importFile.value = "";
+        }
         setStatus("Imported all client data.");
       } catch (err) {
         setStatus(`Import failed: ${err.message}`, true);
       }
+    }
+
+    const importAllFileInput = document.getElementById("importAllFile");
+    document.getElementById("importAllBtn").addEventListener("click", () => {
+      importAllFileInput.click();
+    });
+
+    importAllFileInput.addEventListener("change", async () => {
+      const file = importAllFileInput.files?.[0];
+      if (!file) return;
+      await importAllFromFile(file);
+      importAllFileInput.value = "";
     });
 
     categorySelect.addEventListener("change", populateClientSelect);
