@@ -49,6 +49,12 @@
       margin-top: 2px;
     }
 
+    .backupControls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
 
     h1, h2 {
       margin: 0 0 8px;
@@ -175,6 +181,12 @@
     <div class="row">
       <button id="launchBtn" class="primary">Launch selected client</button>
       <button id="resetBtn" class="danger">Reset selected profile</button>
+    </div>
+
+    <div class="backupControls">
+      <button id="exportAllBtn">Save all client data</button>
+      <input id="importAllFile" type="file" accept="application/json" />
+      <button id="importAllBtn">Import saved client data</button>
     </div>
 
     <p id="activeClient"></p>
@@ -581,6 +593,51 @@
         frame.src = resolveClientUrl(activeClientPath);
       }
       setStatus(`Deleted profile "${target}"`);
+    });
+
+
+    document.getElementById("exportAllBtn").addEventListener("click", () => {
+      saveActiveProfileBeforeSwitch();
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        launcherState: loadState()
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "eaglercraft-all-client-data.json";
+      a.click();
+      URL.revokeObjectURL(url);
+      setStatus("Saved all client data to file.");
+    });
+
+    document.getElementById("importAllBtn").addEventListener("click", async () => {
+      const importFile = document.getElementById("importAllFile");
+      const file = importFile.files?.[0];
+      if (!file) {
+        setStatus("Select a saved data JSON file first.", true);
+        return;
+      }
+
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        if (!parsed || typeof parsed !== "object" || typeof parsed.launcherState !== "object") {
+          throw new Error("Invalid save format");
+        }
+
+        saveState(parsed.launcherState);
+        renderProfileMenu();
+        if (activeClientPath) {
+          applyProfile(activeClientPath);
+          frame.src = resolveClientUrl(activeClientPath);
+        }
+        importFile.value = "";
+        setStatus("Imported all client data.");
+      } catch (err) {
+        setStatus(`Import failed: ${err.message}`, true);
+      }
     });
 
     categorySelect.addEventListener("change", populateClientSelect);
