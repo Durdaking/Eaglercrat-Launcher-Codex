@@ -10,9 +10,9 @@
       --panel: #171a21;
       --text: #e7ebf3;
       --subtle: #9ea9bf;
-      --accent: #5f86ff;
-      --accent2: #6dc8ff;
-      --danger: #ff6b6b;
+      --accent: #9b5cff;
+      --accent2: #bf80ff;
+      --danger: #62a0ff;
       --ok: #5dd39e;
       font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
     }
@@ -21,7 +21,7 @@
 
     body {
       margin: 0;
-      background: linear-gradient(180deg, #0f1115 0%, #0d1220 100%);
+      background: linear-gradient(rgba(11, 10, 22, 0.72), rgba(8, 8, 18, 0.8)), url("background.svg") center/cover fixed no-repeat;
       color: var(--text);
       min-height: 100vh;
       display: grid;
@@ -100,6 +100,9 @@
       cursor: pointer;
       font-weight: 600;
       transition: transform .05s ease, border-color .2s ease;
+      background: linear-gradient(90deg, #8f4fff, #b976ff);
+      border-color: #7d45dd;
+      color: #f6edff;
     }
 
     button:hover { border-color: var(--accent2); }
@@ -126,7 +129,8 @@
     }
 
     .versionBtn {
-      background: #121a2b;
+      background: linear-gradient(90deg, #7d45dd, #9b5cff);
+      color: #f6edff;
     }
 
     .versionBtn.active {
@@ -143,11 +147,25 @@
 
     .primary {
       background: linear-gradient(90deg, var(--accent), var(--accent2));
-      color: #0b1222;
+      color: #f6edff;
       border: 0;
     }
 
-    .danger { border-color: #5a2525; color: #ffc6c6; }
+    .danger {
+      background: linear-gradient(90deg, #4d87ff, #72a7ff);
+      border-color: #3e74e0;
+      color: #eef5ff;
+    }
+
+    .launchRow {
+      margin-top: 14px;
+      display: flex;
+      justify-content: center;
+    }
+
+    #launchBtn {
+      width: min(360px, 100%);
+    }
 
     #status { margin-top: 10px; color: var(--ok); min-height: 1.3em; text-align: center; }
     #activeClient { text-align: center; }
@@ -180,7 +198,6 @@
 
       <div class="sideCol">
         <div class="actionButtons">
-          <button id="launchBtn" class="primary">Play selected client</button>
           <button id="resetBtn" class="danger">Reset selected profile</button>
           <button id="exportAllBtn">Save all client data</button>
           <button id="importAllBtn">Import saved client data</button>
@@ -189,16 +206,19 @@
             <button id="newProfileBtn">Create profile</button>
             <button id="deleteProfileBtn" class="danger">Delete profile</button>
           </div>
-          <button id="skinBtn">Upload skin (auto-load on play)</button>
-          <input id="skinFile" class="importFileHidden" type="file" accept="image/*" />
+          <button id="backgroundBtn">Upload background image</button>
+          <input id="backgroundFile" class="importFileHidden" type="file" accept="image/png,image/jpeg,image/webp" />
         </div>
       </div>
+    </div>
+
+    <div class="launchRow">
+      <button id="launchBtn" class="primary">Play selected client</button>
     </div>
 
     <p id="activeClient"></p>
     <p id="status"></p>
   </section>
-
 
   <script>
     const VERSION_FILES = {
@@ -258,6 +278,7 @@
     };
 
     const VERSION_ORDER = ["1.12.2", "1.8.8", "1.5.2"];
+    const DEFAULT_BACKGROUND = "linear-gradient(rgba(11, 10, 22, 0.72), rgba(8, 8, 18, 0.8)), url(\"background.svg\") center/cover fixed no-repeat";
 
     const LAUNCHER_KEY = "launcherProfiles.v2";
     const LEGACY_LAUNCHER_KEY = "launcherProfiles.v1";
@@ -269,15 +290,6 @@
     const versionButtons = document.getElementById("versionButtons");
     const categorySelect = document.getElementById("categorySelect");
     const clientSelect = document.getElementById("clientSelect");
-
-    let activeClientPath = "";
-    let activeVersion = VERSION_ORDER[0];
-
-    function setStatus(message, isError = false) {
-      statusEl.style.color = isError ? "#ff9a9a" : "#8de3b2";
-      statusEl.textContent = message;
-    }
-
     function getNonLauncherStorageSnapshot() {
       const snapshot = {};
       for (let i = 0; i < localStorage.length; i++) {
@@ -302,7 +314,7 @@
       return {
         activeProfile: "Default",
         profiles: {
-          Default: { clients: {}, skinDataUrl: null }
+          Default: { clients: {}, backgroundDataUrl: null }
         }
       };
     }
@@ -323,7 +335,7 @@
           return {
             activeProfile: "Imported Legacy",
             profiles: {
-              "Imported Legacy": { clients: legacy, skinDataUrl: null }
+              "Imported Legacy": { clients: legacy, backgroundDataUrl: null }
             }
           };
         }
@@ -346,10 +358,10 @@
     function getActiveProfile(state) {
       const profileName = state.activeProfile;
       if (!state.profiles[profileName]) {
-        state.profiles[profileName] = { clients: {}, skinDataUrl: null };
+        state.profiles[profileName] = { clients: {}, backgroundDataUrl: null };
       }
-      if (!Object.prototype.hasOwnProperty.call(state.profiles[profileName], "skinDataUrl")) {
-        state.profiles[profileName].skinDataUrl = null;
+      if (!Object.prototype.hasOwnProperty.call(state.profiles[profileName], "backgroundDataUrl")) {
+        state.profiles[profileName].backgroundDataUrl = null;
       }
       return state.profiles[profileName];
     }
@@ -443,14 +455,18 @@
       });
       setActiveVersion(VERSION_ORDER[0]);
     }
+    function applyProfileBackground(profile) {
+      const backgroundDataUrl = profile?.backgroundDataUrl;
+      if (!backgroundDataUrl) {
+        document.body.style.background = DEFAULT_BACKGROUND;
+        return;
+      }
 
-
-    function applyProfileSkin(profile) {
-      if (!profile?.skinDataUrl) return;
-      const skinDataUrl = profile.skinDataUrl;
-      localStorage.setItem("launcher.customSkin", skinDataUrl);
-      localStorage.setItem("eaglercraft.skin.custom", skinDataUrl);
-      localStorage.setItem("eaglercraftX.skin.custom", skinDataUrl);
+      document.body.style.backgroundImage = `linear-gradient(rgba(12, 16, 26, 0.72), rgba(8, 12, 20, 0.82)), url(${JSON.stringify(backgroundDataUrl)})`;
+      document.body.style.backgroundSize = "cover";
+      document.body.style.backgroundPosition = "center";
+      document.body.style.backgroundAttachment = "fixed";
+      document.body.style.backgroundRepeat = "no-repeat";
     }
 
     function applyProfile(clientPath) {
@@ -460,7 +476,7 @@
       const clientSave = profile.clients[clientPath] || {};
       clearNonLauncherStorage();
       Object.entries(clientSave).forEach(([k, v]) => localStorage.setItem(k, v));
-      applyProfileSkin(profile);
+      applyProfileBackground(profile);
       saveState(state);
     }
 
@@ -533,7 +549,7 @@
         return;
       }
       saveActiveProfileBeforeSwitch();
-      state.profiles[name] = { clients: {}, skinDataUrl: null };
+      state.profiles[name] = { clients: {}, backgroundDataUrl: null };
       state.activeProfile = name;
       saveState(state);
       renderProfileMenu();
@@ -561,39 +577,37 @@
       setStatus(`Deleted profile "${target}"`);
     });
 
-
-
-    const skinFileInput = document.getElementById("skinFile");
-    document.getElementById("skinBtn").addEventListener("click", () => {
-      skinFileInput.click();
+    const backgroundFileInput = document.getElementById("backgroundFile");
+    document.getElementById("backgroundBtn").addEventListener("click", () => {
+      backgroundFileInput.click();
     });
 
-    skinFileInput.addEventListener("change", async () => {
-      const file = skinFileInput.files?.[0];
+    backgroundFileInput.addEventListener("change", async () => {
+      const file = backgroundFileInput.files?.[0];
       if (!file) return;
       try {
-        const skinDataUrl = await new Promise((resolve, reject) => {
+        const backgroundDataUrl = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(String(reader.result || ""));
-          reader.onerror = () => reject(new Error("Failed to read skin file"));
+          reader.onerror = () => reject(new Error("Failed to read background image file"));
           reader.readAsDataURL(file);
         });
 
-        if (!skinDataUrl.startsWith("data:image/")) {
-          throw new Error("Skin file must be an image");
+        if (!backgroundDataUrl.startsWith("data:image/")) {
+          throw new Error("Background file must be an image");
         }
 
         const state = loadState();
         state.activeProfile = getActiveProfileName();
         const profile = getActiveProfile(state);
-        profile.skinDataUrl = skinDataUrl;
+        profile.backgroundDataUrl = backgroundDataUrl;
         saveState(state);
-        applyProfileSkin(profile);
-        setStatus(`Skin saved for profile "${state.activeProfile}" and will load on play.`);
+        applyProfileBackground(profile);
+        setStatus(`Background saved for profile "${state.activeProfile}".`);
       } catch (err) {
-        setStatus(`Skin import failed: ${err.message}`, true);
+        setStatus(`Background import failed: ${err.message}`, true);
       } finally {
-        skinFileInput.value = "";
+        backgroundFileInput.value = "";
       }
     });
 
@@ -650,6 +664,7 @@
     renderProfileMenu();
     populateCategorySelect();
     renderVersionButtons();
+    applyProfileBackground(getActiveProfile(loadState()));
     activeClientEl.textContent = "Active client: none (select a version button + play)";
   </script>
 </body>
