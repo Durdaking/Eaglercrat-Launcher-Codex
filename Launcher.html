@@ -1,5 +1,5 @@
 diff --git a/Launcher.html b/Launcher.html
-index 933cab6a45994566d4fb6b50f361dc388cf87982..fba14313ead66bd7165666bf6a4609686c4f7966 100644
+index 933cab6a45994566d4fb6b50f361dc388cf87982..15bd78b7fd462cf35789b1253c37dae17e03107b 100644
 --- a/Launcher.html
 +++ b/Launcher.html
 @@ -1,49 +1,49 @@
@@ -56,7 +56,7 @@ index 933cab6a45994566d4fb6b50f361dc388cf87982..fba14313ead66bd7165666bf6a460968
        font-weight: 700;
        font-size: 18px;
        margin-top: 2px;
-@@ -78,145 +78,166 @@
+@@ -78,150 +78,170 @@
      }
  
      h1, h2 {
@@ -208,7 +208,7 @@ index 933cab6a45994566d4fb6b50f361dc388cf87982..fba14313ead66bd7165666bf6a460968
      <p id="status"></p>
    </section>
  
- 
+-
    <script>
      const VERSION_FILES = {
        "1.12.2": [
@@ -229,7 +229,12 @@ index 933cab6a45994566d4fb6b50f361dc388cf87982..fba14313ead66bd7165666bf6a460968
            "hacked/DragonX_V4.html",
            "hacked/UwUClient v1 Full.html",
            "hacked/Justin 1.2.4.html",
-@@ -236,142 +257,143 @@
+           "hacked/DragonXLite.html",
+           "hacked/dragonXv3.html",
+           "hacked/PremiumDragonv2.html",
+           "hacked/DragonXShadow.html"
+         ],
+@@ -236,142 +256,134 @@
            "legit/PixelClient 1.8.8 WASM.html",
            "legit/EaglerReborn.html",
            "legit/shadowclient3.0beta.html"
@@ -255,7 +260,7 @@ index 933cab6a45994566d4fb6b50f361dc388cf87982..fba14313ead66bd7165666bf6a460968
      };
  
      const VERSION_ORDER = ["1.12.2", "1.8.8", "1.5.2"];
-+    const DEFAULT_BACKGROUND = "linear-gradient(rgba(11, 10, 22, 0.72), rgba(8, 8, 18, 0.8)), url(\"assets/default-moon-background.svg\") center/cover fixed no-repeat";
++    const DEFAULT_BACKGROUND = "linear-gradient(rgba(11, 10, 22, 0.72), rgba(8, 8, 18, 0.8)), url(\"background.svg\") center/cover fixed no-repeat";
  
      const LAUNCHER_KEY = "launcherProfiles.v2";
      const LEGACY_LAUNCHER_KEY = "launcherProfiles.v1";
@@ -267,15 +272,15 @@ index 933cab6a45994566d4fb6b50f361dc388cf87982..fba14313ead66bd7165666bf6a460968
      const versionButtons = document.getElementById("versionButtons");
      const categorySelect = document.getElementById("categorySelect");
      const clientSelect = document.getElementById("clientSelect");
- 
-     let activeClientPath = "";
-     let activeVersion = VERSION_ORDER[0];
- 
-     function setStatus(message, isError = false) {
-       statusEl.style.color = isError ? "#ff9a9a" : "#8de3b2";
-       statusEl.textContent = message;
-     }
- 
+-
+-    let activeClientPath = "";
+-    let activeVersion = VERSION_ORDER[0];
+-
+-    function setStatus(message, isError = false) {
+-      statusEl.style.color = isError ? "#ff9a9a" : "#8de3b2";
+-      statusEl.textContent = message;
+-    }
+-
      function getNonLauncherStorageSnapshot() {
        const snapshot = {};
        for (let i = 0; i < localStorage.length; i++) {
@@ -378,7 +383,7 @@ index 933cab6a45994566d4fb6b50f361dc388cf87982..fba14313ead66bd7165666bf6a460968
      function displayClientName(filePath) {
        return filePath.split("/").pop() || filePath;
      }
-@@ -421,68 +443,72 @@
+@@ -421,68 +433,72 @@
          btn.classList.toggle("active", btn.dataset.version === version);
        });
  
@@ -459,7 +464,7 @@ index 933cab6a45994566d4fb6b50f361dc388cf87982..fba14313ead66bd7165666bf6a460968
      document.getElementById("launchBtn").addEventListener("click", () => {
        const path = getSelectedClientPath();
        if (!path) {
-@@ -511,111 +537,109 @@
+@@ -511,111 +527,109 @@
  
      profileSelect.addEventListener("change", () => {
        saveActiveProfileBeforeSwitch();
@@ -586,7 +591,7 @@ index 933cab6a45994566d4fb6b50f361dc388cf87982..fba14313ead66bd7165666bf6a460968
          const parsed = JSON.parse(text);
          if (!parsed || typeof parsed !== "object" || typeof parsed.launcherState !== "object") {
            throw new Error("Invalid save format");
-@@ -628,29 +652,30 @@
+@@ -628,29 +642,30 @@
          }
          setStatus("Imported all client data.");
        } catch (err) {
