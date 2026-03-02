@@ -49,7 +49,7 @@
     .versions {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 12px;
+      gap: 14px;
     }
 
     .versionCard {
@@ -57,6 +57,16 @@
       border: 1px solid #273149;
       border-radius: 10px;
       background: #131827;
+    }
+
+    .versionCard strong {
+      display: inline-block;
+      margin-bottom: 8px;
+    }
+
+    .versionCard .stack {
+      display: grid;
+      gap: 10px;
     }
 
     select, button, input[type="file"] {
@@ -81,8 +91,8 @@
     .row {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 8px;
-      margin-top: 10px;
+      gap: 14px;
+      margin-top: 14px;
     }
 
     .primary {
@@ -144,31 +154,37 @@
         "PrecisionClient.html",
         "fuchsiax.html"
       ],
-      "1.8.8": [
-        "Hacked/DragonX_V2_International.html",
-        "hacked/NitClient 2.0.html",
-        "hacked/nit_client.html",
-        "hacked/pi-client.html",
-        "hacked/DragonX_V4.html",
-        "hacked/UwUClient v1 Full.html",
-        "hacked/Justin 1.2.4.html",
-        "hacked/DragonXLite.html",
-        "hacked/dragonXv3.html",
-        "hacked/PremiumDragonv2.html",
-        "hacked/DragonXShadow.html",
-        "Legit/AstriaWASM.html",
-        "Legit/AstriaJS.html",
-        "Legit/EaglercraftX_1.8_WASM-GC_Offline_Download.html",
-        "Legit/EaglercraftX_1.8_u53_Offline_Signed.html",
-        "Legit/Astra Client 2, Pre-Alpha-02.html",
-        "Legit/ResentClient_5.0_WASM.html",
-        "Modded/Eaglerforge.html",
-        "Modded/Eaglercraft_IR_StarLikeClient_0.4.2.html",
-        "legit/PixelClient 1.8.8 JS.html",
-        "legit/PixelClient 1.8.8 WASM.html",
-        "legit/EaglerReborn.html",
-        "legit/shadowclient3.0beta.html"
-      ],
+      "1.8.8": {
+        hacked: [
+          "Hacked/DragonX_V2_International.html",
+          "hacked/NitClient 2.0.html",
+          "hacked/nit_client.html",
+          "hacked/pi-client.html",
+          "hacked/DragonX_V4.html",
+          "hacked/UwUClient v1 Full.html",
+          "hacked/Justin 1.2.4.html",
+          "hacked/DragonXLite.html",
+          "hacked/dragonXv3.html",
+          "hacked/PremiumDragonv2.html",
+          "hacked/DragonXShadow.html"
+        ],
+        legit: [
+          "Legit/AstriaWASM.html",
+          "Legit/AstriaJS.html",
+          "Legit/EaglercraftX_1.8_WASM-GC_Offline_Download.html",
+          "Legit/EaglercraftX_1.8_u53_Offline_Signed.html",
+          "Legit/Astra Client 2, Pre-Alpha-02.html",
+          "Legit/ResentClient_5.0_WASM.html",
+          "legit/PixelClient 1.8.8 JS.html",
+          "legit/PixelClient 1.8.8 WASM.html",
+          "legit/EaglerReborn.html",
+          "legit/shadowclient3.0beta.html"
+        ],
+        modded: [
+          "Modded/Eaglerforge.html",
+          "Modded/Eaglercraft_IR_StarLikeClient_0.4.2.html"
+        ]
+      },
       "1.12.2": [
         "PixelClient 1.12.2 JS.html",
         "TuffClient_1.12.2wasm.html",
@@ -178,6 +194,12 @@
         "Eaglercraft-1.12.2-WASM.html",
         "RadiantClient-1.1-WASM.html"
       ]
+    };
+
+    const CATEGORY_LABELS = {
+      hacked: "Hacked clients",
+      legit: "Legit clients",
+      modded: "Modded clients"
     };
 
     const LAUNCHER_KEY = "launcherProfiles.v2";
@@ -191,7 +213,9 @@
     const profileSelect = document.getElementById("profileSelect");
 
     const selects = {};
+    const categorySelects = {};
     let activeClientPath = "";
+    let activeVersion = Object.keys(VERSION_FILES)[0];
 
     function setStatus(message, isError = false) {
       statusEl.style.color = isError ? "#ff9a9a" : "#8de3b2";
@@ -202,7 +226,7 @@
       const snapshot = {};
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (!k || k === LAUNCHER_KEY || k === LAUNCHER_META_KEY) continue;
+        if (!k || k === LAUNCHER_KEY || k === LEGACY_LAUNCHER_KEY || k === LAUNCHER_META_KEY) continue;
         snapshot[k] = localStorage.getItem(k);
       }
       return snapshot;
@@ -212,7 +236,7 @@
       const toDelete = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (!k || k === LAUNCHER_KEY || k === LAUNCHER_META_KEY) continue;
+        if (!k || k === LAUNCHER_KEY || k === LEGACY_LAUNCHER_KEY || k === LAUNCHER_META_KEY) continue;
         toDelete.push(k);
       }
       toDelete.forEach(k => localStorage.removeItem(k));
@@ -330,47 +354,108 @@
       setStatus(`Launched ${clientPath} with isolated save profile.`);
     }
 
-    function selectedClientPath() {
-      const firstVersion = Object.keys(VERSION_FILES)[0];
-      let version = firstVersion;
-      let file = selects[firstVersion]?.value;
-      Object.entries(selects).forEach(([v, select]) => {
-        if (select.dataset.active === "true") {
-          version = v;
-          file = select.value;
-        }
+    function markVersionActive(version) {
+      activeVersion = version;
+      Object.entries(selects).forEach(([currentVersion, select]) => {
+        select.dataset.active = currentVersion === version ? "true" : "false";
       });
-      return `${version}/${file}`;
+    }
+
+    function getCategoryFiles(version, category) {
+      const grouped = VERSION_FILES[version];
+      if (!grouped || Array.isArray(grouped)) return [];
+      return grouped[category] || [];
+    }
+
+    function populateCategoryFiles(version) {
+      const categorySelect = categorySelects[version];
+      const fileSelect = selects[version];
+      if (!categorySelect || !fileSelect) return;
+
+      const files = getCategoryFiles(version, categorySelect.value);
+      fileSelect.innerHTML = "";
+      files.forEach((file) => {
+        const option = document.createElement("option");
+        option.value = file;
+        option.textContent = file;
+        fileSelect.appendChild(option);
+      });
+    }
+
+    function selectedClientPath() {
+      const version = activeVersion;
+      const fileSelect = selects[version];
+      const file = fileSelect?.value;
+      return file ? `${version}/${file}` : "";
     }
 
     function renderVersionMenus() {
-      Object.entries(VERSION_FILES).forEach(([version, files], index) => {
+      Object.entries(VERSION_FILES).forEach(([version, data], index) => {
         const card = document.createElement("div");
         card.className = "versionCard";
-        card.innerHTML = `<strong>${version}</strong>`;
 
-        const select = document.createElement("select");
-        files.forEach(file => {
-          const option = document.createElement("option");
-          option.value = file;
-          option.textContent = file;
-          select.appendChild(option);
-        });
-        select.dataset.active = index === 0 ? "true" : "false";
+        const title = document.createElement("strong");
+        title.textContent = version;
+        card.appendChild(title);
 
-        select.addEventListener("focus", () => {
-          Object.values(selects).forEach(s => s.dataset.active = "false");
-          select.dataset.active = "true";
-        });
+        const stack = document.createElement("div");
+        stack.className = "stack";
 
-        card.appendChild(select);
+        if (version === "1.8.8" && !Array.isArray(data)) {
+          const categorySelect = document.createElement("select");
+          Object.keys(data).forEach((category) => {
+            const option = document.createElement("option");
+            option.value = category;
+            option.textContent = CATEGORY_LABELS[category] || category;
+            categorySelect.appendChild(option);
+          });
+          categorySelects[version] = categorySelect;
+          stack.appendChild(categorySelect);
+
+          const clientSelect = document.createElement("select");
+          selects[version] = clientSelect;
+          stack.appendChild(clientSelect);
+
+          categorySelect.addEventListener("change", () => {
+            markVersionActive(version);
+            populateCategoryFiles(version);
+          });
+
+          categorySelect.addEventListener("focus", () => markVersionActive(version));
+          clientSelect.addEventListener("focus", () => markVersionActive(version));
+          clientSelect.addEventListener("change", () => markVersionActive(version));
+
+          populateCategoryFiles(version);
+        } else {
+          const select = document.createElement("select");
+          data.forEach((file) => {
+            const option = document.createElement("option");
+            option.value = file;
+            option.textContent = file;
+            select.appendChild(option);
+          });
+
+          select.addEventListener("focus", () => markVersionActive(version));
+          select.addEventListener("change", () => markVersionActive(version));
+
+          selects[version] = select;
+          stack.appendChild(select);
+        }
+
+        card.appendChild(stack);
         menusContainer.appendChild(card);
-        selects[version] = select;
+        if (index === 0) {
+          markVersionActive(version);
+        }
       });
     }
 
     document.getElementById("launchBtn").addEventListener("click", () => {
       const path = selectedClientPath();
+      if (!path) {
+        setStatus("No client is selected for the active version.", true);
+        return;
+      }
       launchClient(path);
     });
 
@@ -473,6 +558,10 @@
 
     document.getElementById("resetBtn").addEventListener("click", () => {
       const path = selectedClientPath();
+      if (!path) {
+        setStatus("No client is selected for the active version.", true);
+        return;
+      }
       const state = loadState();
       state.activeProfile = getActiveProfileName();
       const profile = getActiveProfile(state);
