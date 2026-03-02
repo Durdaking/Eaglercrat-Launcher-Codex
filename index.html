@@ -1,1 +1,47 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Advanced Eagler Launcher</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
 
+<canvas id="particles"></canvas>
+
+<div class="launcher">
+
+<h1>Advanced Eagler Launcher</h1>
+
+<div class="profiles">
+<select id="profileSelect"></select>
+<button onclick="Launcher.createProfile()">New</button>
+<button onclick="Launcher.deleteProfile()">Delete</button>
+<button onclick="Launcher.lockProfile()">Lock</button>
+</div>
+
+<select id="versionSelect"></select>
+<select id="categorySelect" style="display:none"></select>
+
+<div id="clientGrid" class="clientGrid"></div>
+
+<div class="controls">
+<button onclick="Launcher.launch()">Play</button>
+<button onclick="Launcher.uploadBackground()">Background</button>
+<button onclick="Launcher.toggleMusic()">Music</button>
+<button onclick="Launcher.exportBackup()">Export</button>
+<button onclick="Launcher.importBackup()">Import</button>
+</div>
+
+<p id="status"></p>
+</div>
+
+<audio id="bgMusic" src="assets/music.mp3" loop></audio>
+
+<script src="compression.js"></script>
+<script src="particles.js"></script>
+<script src="launcher.js"></script>
+
+</body>
+</html>
