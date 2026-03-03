@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eaglercraft Launcher</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #000000;
+  color: #ffffff;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  min-height: 100vh;
+  display: flex;
+  overflow-x: hidden;
+}
+
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: #000000;
+}
+.bg-glow {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: transparent;
+}
+.bg-scan {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: transparent;
+}
+
+/* ══ SIDEBAR ══ */
+.sidebar {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: 272px;
+  background: #7b4fc9;
+  border-right: 1px solid #7b4fc9;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-shadow: none;
+}
+
+.sidebar-header {
+  padding: 20px 18px 18px;
+  border-bottom: 1px solid #7b4fc9;
+  text-align: center;
+  flex-shrink: 0;
+}
+.sidebar-logo {
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: none;
+  animation: none;
+}
+.sidebar-sub {
+  font-size: 12px;
+  color: #ffffff;
+  margin-top: 5px;
+  text-transform: uppercase;
+}
+
+.sidebar-nav { flex: 1; padding: 8px 0 16px; }
+
+.nav-group { margin-bottom: 2px; }
+
+.nav-ver-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  border-left: 2px solid transparent;
+  color: #ffffff;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background .14s, color .14s, border-color .14s;
+  text-align: left;
+}
+.nav-ver-btn:hover { background: rgba(255,255,255,0.1); }
+.nav-ver-btn.open  { background: rgba(255,255,255,0.2); border-left-color: #ffffff; }
+.nav-ver-btn .chevron { font-size: 12px; transition: transform .2s; opacity: .7; }
+.nav-ver-btn.open .chevron { transform: rotate(90deg); }
+
+.nav-clients { overflow: hidden; max-height: 0; transition: max-height .28s ease; }
+.nav-clients.open { max-height: 800px; }
+
+.nav-sub-label {
+  font-size: 12px;
+  color: #ffffff;
+  text-transform: uppercase;
+  padding: 8px 20px 3px;
+  opacity: .8;
+}
+
+.nav-client-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px 7px 22px;
+  background: none;
+  border: none;
+  border-left: 2px solid transparent;
+  color: #ffffff;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: background .12s, color .12s, border-color .12s;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.nav-client-btn:hover { background: rgba(255,255,255,0.1); }
+.nav-client-btn.active { background: rgba(255,255,255,0.2); border-left-color: #ffffff; }
+.nav-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; background: #ffffff; transition: background .14s; }
+
+/* ══ MAIN ══ */
+.main {
+  margin-left: 272px;
+  flex: 1;
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column;
+  min-height: 100vh;
+}
+
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  background: #7b4fc9;
+  border-bottom: 1px solid #7b4fc9;
+  padding: 13px 30px;
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+}
+.topbar-title {
+  font-family: Arial, sans-serif;
+  font-size: 12px; font-weight: bold;
+  color: #ffffff;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.topbar-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.topbar-credit {
+  position: absolute;
+  right: 30px;
+  top: 13px;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  color: #ff0000;
+  font-weight: bold;
+}
+
+.content-wrap { flex: 1; padding: 30px 32px 20px; max-width: 860px; }
+
+/* ── WELCOME ── */
+.welcome { text-align: center; padding: 72px 20px; }
+.welcome-logo {
+  font-family: Arial, sans-serif;
+  font-size: 32px; font-weight: bold;
+  color: #ffffff;
+  text-shadow: none;
+  line-height: 1; animation: none;
+}
+.welcome-sub {
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  color: #ffffff;
+  margin-top: 10px;
+  text-transform: uppercase;
+}
+.hline {
+  height: 1px;
+  background: #ffffff;
+  margin: 20px auto; max-width: 480px;
+}
+.welcome-hint { font-size: 12px; color: #ffffff; text-transform: uppercase; margin-top: 10px; }
+
+/* ── CLIENT VIEW ── */
+.client-view { display: none; }
+.client-view.active { display: block; }
+
+.client-title {
+  font-family: Arial, sans-serif;
+  font-size: 18px; font-weight: bold;
+  color: #ffffff; line-height: 1.2; margin-bottom: 10px;
+}
+.client-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+
+.launch-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 10px 20px;
+  background: #7b4fc9;
+  border: 1px solid #7b4fc9;
+  border-radius: 0;
+  color: #ffffff;
+  font-family: Arial, sans-serif; font-size: 12px; font-weight: bold; text-transform: uppercase;
+  text-decoration: none; cursor: pointer;
+  transition: all .17s;
+  text-shadow: none;
+  box-shadow: none;
+  margin-bottom: 28px;
+}
+.launch-btn:hover {
+  background: #6a3fb5;
+  border-color: #6a3fb5;
+  transform: none;
+}
+
+/* Tags */
+.tag {
+  font-family: Arial, sans-serif; font-size: 12px; font-weight: bold;
+  text-transform: uppercase;
+  padding: 2px 8px; border-radius: 0; border: 1px solid #ffffff;
+  white-space: nowrap;
+  background: transparent;
+  color: #ffffff;
+}
+
+/* ══ IO BAR ══ */
+.io-bar {
+  position: sticky; bottom: 0; z-index: 50;
+  background: #7b4fc9;
+  border-top: 1px solid #7b4fc9;
+  padding: 11px 28px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.io-label { font-family: Arial, sans-serif; font-size: 12px; font-weight: bold; color: #ffffff; white-space: nowrap; }
+.io-btn {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 15px; border-radius: 0;
+  font-family: Arial, sans-serif; font-size: 12px; font-weight: bold;
+  cursor: pointer; transition: all .15s; border: 1px solid #ffffff; white-space: nowrap;
+  background: transparent;
+  color: #ffffff;
+}
+.io-btn:hover  { background: rgba(255,255,255,0.1); }
+#file-import { display: none; }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 72px; right: 24px;
+  background: #7b4fc9; border: 1px solid #ffffff; border-radius: 0;
+  padding: 11px 18px; font-size: 12px; color: #ffffff;
+  z-index: 999; opacity: 0; transform: translateY(8px);
+  transition: opacity .22s, transform .22s; pointer-events: none;
+  box-shadow: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #000000; }
+::-webkit-scrollbar-thumb { background: #7b4fc9; border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: #6a3fb5; }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+<div class="bg-scan"></div>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">EAGLERCRAFT</div>
+    <div class="sidebar-sub">LAUNCHER</div>
+  </div>
+  <div class="sidebar-nav" id="sidebarNav"></div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbarTitle">Select a client</div>
+    <div class="topbar-tags" id="topbarTags"></div>
+    <div class="topbar-credit">Made by Durdaking</div>
+  </div>
+
+  <div class="content-wrap">
+    <div id="welcome" class="welcome">
+      <div class="welcome-logo">EAGLERCRAFT</div>
+      <div class="welcome-sub">Launcher</div>
+      <div class="hline"></div>
+      <div class="welcome-hint">← choose a client from the sidebar</div>
+    </div>
+    <div id="clientViews"></div>
+  </div>
+
+  <!-- IO BAR -->
+  <div class="io-bar">
+    <span class="io-label">Save Web Data - This Client</span>
+    <button class="io-btn" id="btnExportCur" onclick="exportCurrent()" style="display:none">Export</button>
+    <button class="io-btn" onclick="importForCurrent()" style="display:none" id="btnImportCur">Import</button>
+    <button class="io-btn" id="btnClear" onclick="clearCurrent()" style="display:none">Clear</button>
+    <input type="file" id="file-import" accept=".json" onchange="importData(event)">
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ════════════════════════════════════
+   CLIENT REGISTRY
+════════════════════════════════════ */
+const CLIENTS = [
+  {id:'1122-ec-wasm', ver:'1.12.2', name:'Eaglercraft 1.12.2', engine:'wasm', type:'legit',  url:'1.12.2/Eaglercraft-1.12.2-WASM.html'},
+  {id:'1122-ec-js',   ver:'1.12.2', name:'Eaglercraft 1.12.2', engine:'js',   type:'legit',  url:'1.12.2/Eaglercraft-1.12.2.html'},
+  {id:'1122-px-js',   ver:'1.12.2', name:'PixelClient 1.12.2',  engine:'js',   type:'legit', url:'1.12.2/PixelClient 1.12.2 JS.html'},
+  {id:'1122-px-wasm', ver:'1.12.2', name:'PixelClient 1.12.2',  engine:'wasm', type:'legit', url:'1.12.2/PixelClient 1.12.2 WASM.html'},
+  {id:'1122-rc-wasm', ver:'1.12.2', name:'RadiantClient 1.1',   engine:'wasm', type:'legit', url:'1.12.2/RadiantClient-1.1-WASM.html'},
+  {id:'1122-tc-js',   ver:'1.12.2', name:'TuffClient 1.12.2',   engine:'js',   type:'legit', url:'1.12.2/TuffClient_1.12.2-JS.html'},
+  {id:'1122-tc-wasm', ver:'1.12.2', name:'TuffClient 1.12.2',   engine:'wasm', type:'legit', url:'1.12.2/TuffClient_1.12.2wasm.html'},
+  {id:'152-of',  ver:'1.5.2', name:'OddFuture Client', engine:'unk', type:'legit', url:'1.5.2/OddFutureClient.html'},
+  {id:'152-pc',  ver:'1.5.2', name:'Precision Client',  engine:'unk', type:'legit', url:'1.5.2/PrecisionClient.html'},
+  {id:'152-ec',  ver:'1.5.2', name:'Eaglercraft 1.5.2', engine:'js',  type:'legit',  url:'1.5.2/eaglercraft.1.5.2.html'},
+  {id:'152-fx',  ver:'1.5.2', name:'FuchsiaX',          engine:'unk', type:'legit', url:'1.5.2/fuchsiax.html'},
+  {id:'152-nc',  ver:'1.5.2', name:'Nit Client',         engine:'unk', type:'legit', url:'1.5.2/nitclient.html'},
+  {id:'188-dx',  ver:'1.8.8', name:'DragonX V2 Intl',           engine:'unk', type:'hacked', url:'1.8.8/Hacked/DragonX_V2_International.html'},
+  {id:'188-ac',  ver:'1.8.8', name:'Astra Client 2 Pre-Alpha-02',engine:'unk', type:'legit',  url:'1.8.8/Legit/Astra Client 2, Pre-Alpha-02.html'},
+  {id:'188-aj',  ver:'1.8.8', name:'Astria (JS)',                engine:'js',  type:'legit',  url:'1.8.8/Legit/AstriaJS.html'},
+  {id:'188-aw',  ver:'1.8.8', name:'Astria (WASM)',              engine:'wasm',type:'legit',  url:'1.8.8/Legit/AstriaWASM.html'},
+  {id:'188-xw',  ver:'1.8.8', name:'EaglercraftX 1.8 WASM-GC',  engine:'wasm',type:'legit',  url:'1.8.8/Legit/EaglercraftX_1.8_WASM-GC_Offline_Download.html'},
+  {id:'188-xu',  ver:'1.8.8', name:'EaglercraftX 1.8 u53 Signed',engine:'unk', type:'legit',  url:'1.8.8/Legit/EaglercraftX_1.8_u53_Offline_Signed.html'},
+  {id:'188-rc',  ver:'1.8.8', name:'ResentClient 5.0',           engine:'wasm',type:'legit',  url:'1.8.8/Legit/ResentClient_5.0_WASM.html'},
+  {id:'188-sl',  ver:'1.8.8', name:'StarLike Client 0.4.2',      engine:'unk', type:'modded', url:'1.8.8/Modded/Eaglercraft_IR_StarLikeClient_0.4.2.html'},
+  {id:'188-ef',  ver:'1.8.8', name:'EaglerForge',                engine:'unk', type:'modded', url:'1.8.8/Modded/Eaglerforge.html'},
+];
+
+/* ════════════════════════════════════
+   STORAGE — per client
+════════════════════════════════════ */
+const SK = 'eagler_launcher_v1';
+function loadAll()        { try { return JSON.parse(localStorage.getItem(SK))||{}; } catch { return {}; } }
+function saveAll(d)       { localStorage.setItem(SK, JSON.stringify(d)); }
+function getCD(id)        {
+  const all = loadAll();
+  if (!all[id]) all[id] = {};
+  return all[id];
+}
+function setCD(id, data)  { const all=loadAll(); all[id]=data; saveAll(all); }
+
+/* ════════════════════════════════════
+   STATE
+════════════════════════════════════ */
+let currentId = null;
+
+/* ════════════════════════════════════
+   SIDEBAR
+════════════════════════════════════ */
+function buildSidebar() {
+  const nav = document.getElementById('sidebarNav');
+  const versions = [...new Set(CLIENTS.map(c=>c.ver))];
+
+  versions.forEach(ver => {
+    const group = document.createElement('div');
+    group.className = 'nav-group';
+
+    const btn = document.createElement('button');
+    btn.className = 'nav-ver-btn';
+    btn.innerHTML = `<span>v${ver}</span><span class="chevron">▶</span>`;
+
+    const list = document.createElement('div');
+    list.className = 'nav-clients';
+
+    const clients = CLIENTS.filter(c => c.ver === ver);
+    const types   = [...new Set(clients.map(c => c.type))];
+
+    types.forEach(type => {
+      if (types.length > 1) {
+        const lbl = document.createElement('div');
+        lbl.className = 'nav-sub-label';
+        lbl.textContent = type==='legit' ? 'Legit' : type==='hacked' ? 'Hacked' : 'Modded';
+        list.appendChild(lbl);
+      }
+      clients.filter(c=>c.type===type).forEach(client => {
+        const cb = document.createElement('button');
+        cb.className = 'nav-client-btn';
+        cb.dataset.id = client.id;
+        const engineLabel = client.engine === 'wasm' ? ' (WASM)' : client.engine === 'js' ? ' (JS)' : ' (?)';
+        cb.title = client.name + engineLabel;
+        cb.innerHTML = `<span class="nav-dot"></span>${client.name}${engineLabel}`;
+        cb.onclick = () => selectClient(client.id);
+        list.appendChild(cb);
+      });
+    });
+
+    btn.onclick = () => {
+      const wasOpen = list.classList.contains('open');
+      document.querySelectorAll('.nav-clients.open').forEach(el => el.classList.remove('open'));
+      document.querySelectorAll('.nav-ver-btn.open').forEach(el => el.classList.remove('open'));
+      if (!wasOpen) { list.classList.add('open'); btn.classList.add('open'); }
+    };
+
+    group.appendChild(btn);
+    group.appendChild(list);
+    nav.appendChild(group);
+  });
+
+  const fb = nav.querySelector('.nav-ver-btn');
+  const fl = nav.querySelector('.nav-clients');
+  if (fb && fl) { fb.classList.add('open'); fl.classList.add('open'); }
+}
+
+/* ════════════════════════════════════
+   CLIENT VIEWS
+════════════════════════════════════ */
+function buildViews() {
+  const c = document.getElementById('clientViews');
+  CLIENTS.forEach(client => {
+    const d = document.createElement('div');
+    d.className = 'client-view';
+    d.id = 'view-'+client.id;
+    d.innerHTML = viewHTML(client);
+    c.appendChild(d);
+  });
+}
+
+function etag(e) {
+  if(e==='wasm') return '<span class="tag">WASM</span>';
+  if(e==='js')   return '<span class="tag">JS</span>';
+  return '<span class="tag">Unknown</span>';
+}
+function ttag(t) {
+  if(t==='legit')  return '<span class="tag">Legit</span>';
+  if(t==='hacked') return '<span class="tag">Hacked</span>';
+  return '<span class="tag">Modded</span>';
+}
+
+function viewHTML(client) {
+  const id = client.id;
+  return `
+  <div class="client-title">${client.name}</div>
+  <div class="client-meta">${etag(client.engine)} ${ttag(client.type)} <span style="color:#ffffff;font-size:12px">v${client.ver}</span></div>
+  <a class="launch-btn" href="${client.url}" target="_blank">Launch Client</a>`;
+}
+
+/* ════════════════════════════════════
+   SELECT CLIENT
+════════════════════════════════════ */
+function selectClient(id) {
+  currentId = id;
+  const client = CLIENTS.find(c=>c.id===id);
+
+  document.querySelectorAll('.nav-client-btn').forEach(b=>b.classList.remove('active'));
+  const ab = document.querySelector(`.nav-client-btn[data-id="${id}"]`);
+  if(ab) {
+    ab.classList.add('active');
+    const list = ab.closest('.nav-clients');
+    const btn  = list && list.previousElementSibling;
+    if(list && !list.classList.contains('open')) {
+      document.querySelectorAll('.nav-clients.open').forEach(el=>el.classList.remove('open'));
+      document.querySelectorAll('.nav-ver-btn.open').forEach(el=>el.classList.remove('open'));
+      list.classList.add('open');
+      if(btn) btn.classList.add('open');
+    }
+  }
+
+  document.getElementById('topbarTitle').textContent = client.name + ' — v' + client.ver;
+  document.getElementById('topbarTags').innerHTML = etag(client.engine)+' '+ttag(client.type);
+  document.getElementById('welcome').style.display = 'none';
+  document.querySelectorAll('.client-view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+id).classList.add('active');
+  document.getElementById('btnExportCur').style.display = 'inline-flex';
+  document.getElementById('btnImportCur').style.display = 'inline-flex';
+  document.getElementById('btnClear').style.display = 'inline-flex';
+
+  renderData(id);
+}
+
+/* ════════════════════════════════════
+   RENDER
+════════════════════════════════════ */
+function renderData(id) {
+  // No client-specific data to render now
+}
+
+/* ════════════════════════════════════
+   IMPORT / EXPORT
+════════════════════════════════════ */
+function exportCurrent() {
+  if(!currentId) return;
+  const client = CLIENTS.find(c=>c.id===currentId);
+  const webData = getCD(currentId);
+  dl(JSON.stringify({version:1,scope:'single',clientId:currentId,clientName:client.name,data:webData},null,2),
+    `eagler-${currentId}.json`);
+  toast('Exported '+client.name+' web data');
+}
+function importForCurrent() {
+  if(!currentId) return;
+  document.getElementById('file-import').click();
+}
+function importData(e) {
+  const file = e.target.files[0];
+  if(!file) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      const j = JSON.parse(ev.target.result);
+      if(j.version!==1) throw new Error('Unknown version');
+      if(j.scope==='single' && j.clientId && j.data) {
+        setCD(j.clientId, j.data);
+        const client = CLIENTS.find(c=>c.id===j.clientId);
+        toast('Imported '+(client?.name||j.clientName||j.clientId));
+        if(currentId === j.clientId) renderData(currentId);
+      } else throw new Error('Bad format');
+    } catch(err) { toast('Import failed: '+err.message); }
+  };
+  r.readAsText(file);
+  e.target.value='';
+}
+function clearCurrent() {
+  if(!currentId) return;
+  if(!confirm('Clear all saved data for this client?')) return;
+  const all=loadAll(); delete all[currentId]; saveAll(all);
+  renderData(currentId); toast('Client data cleared');
+}
+function dl(txt, filename) {
+  const blob = new Blob([txt],{type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+/* ════════════════════════════════════
+   HELPERS
+════════════════════════════════════ */
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+let tt=null;
+function toast(msg) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(tt); tt=setTimeout(()=>el.classList.remove('show'),2600);
+}
+
+/* ════════════════════════════════════
+   INIT
+════════════════════════════════════ */
+buildSidebar();
+buildViews();
+</script>
+</body>
+</html>
